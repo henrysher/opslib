@@ -1,15 +1,15 @@
 .. _index:
 
-Welcome to OpsCommon's documentation!
+Welcome to OpsLib's documentation!
 ======================================
 
 
 Getting Started
 ---------------
 
-If you've never used ``OpsCommon`` before, you should read the
-:doc:`Getting Started with OpsCommon <getting_started>` guide to get familiar
-with ``OpsCommon`` & its usage.
+If you've never used ``OpsLib`` before, you should read the
+:doc:`Getting Started with OpsLib <getting_started>` guide to get familiar
+with ``OpsLib`` & its usage.
 
 
 Currently Supported API
@@ -36,7 +36,7 @@ Currently Supported API
   * :doc:`CLI based on DOC Reference <icsutils/cli>`
   * :doc:`CLI based on JSON Reference <icsutils/jsoncli>`
   * :doc:`JSON Template Substitution Reference <icsutils/jsonsubs>`
-  * :doc:`JSON DIFF API Reference <icsutils/jsondiff>`
+  * :doc:`JSON Diff API Reference <icsutils/jsondiff>`
 
 * **Common Library for ICS Logging**
 
