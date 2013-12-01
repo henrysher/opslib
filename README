@@ -1,0 +1,20 @@
+ICS Common Library Usage
+=======================================
+
+1. How to add a new library
+ * Take the sample in "sample" folder
+ * Modify this sample as you wish
+ * Need to add your new library in "docs" folder
+  a. import your library in "conf.py"
+  b. parse your library in "index.rst", like the existing common library
+ * Add your unit tests into "test" folder
+
+2. How to use this Common Library
+ * In deployment, please add "ICS-OpsCommon" as your RPM dependency
+ * In development, 
+  a. "yum install ICS-OpsComomn"
+  b. copy "Common" folder as "/opt/icsops/common" folder
+
+3. How to use Pylint to do code sanity check
+ * "pip install pylint"
+ * "pylint --rcfile=pylintrc ics*"
