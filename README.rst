@@ -12,3 +12,9 @@ Introduction
 
 OpsLib is a Python package that provides useful libraries and utilities to AWS Operations.
 
+
+**********
+References
+**********
+http://opslib.readthedocs.org/
+
