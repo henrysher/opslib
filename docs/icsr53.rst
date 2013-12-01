@@ -4,7 +4,7 @@
 IcsR53 Common Library
 =====================
 
-.. automodule:: icsr53
+.. automodule:: opslib.icsr53
    :members:
    :undoc-members:
    :private-members:

@@ -1,9 +1,6 @@
 # Makefile for Sphinx documentation
 #
 
-# FIXME: should set PYTHONPATH to make it pass
-export PYTHONPATH=..
-
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build

@@ -4,7 +4,7 @@
 IcsUtils.JsonDiff Common Library
 ================================
 
-.. automodule:: icsutils.jsondiff
+.. automodule:: opslib.icsutils.jsondiff
    :members:
    :undoc-members:
    :private-members:

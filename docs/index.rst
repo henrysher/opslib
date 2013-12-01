@@ -25,7 +25,8 @@ Currently Supported API
   * :doc:`IcsR53 API Reference <icsr53>`
   * :doc:`IcsSNS API Reference <icssns>`
   * :doc:`IcsMeta API Reference <icsmeta>`
-  * :doc:`IcsSecurityGroup API Reference <icssecuritygroup>`
+  * :doc:`IcsSGroup API Reference <icssgroup>`
+  * :doc:`IcsSQS API Reference <icssqs>`
 
 * **Common Library for ICS Utilities**
 
@@ -59,7 +60,8 @@ Currently Supported API
    icsmeta
    icslog
    icsexception
-   icssecuritygroup
+   icssgroup
+   icssqs
    icsutils/icsalert
    icsutils/misc
    icsutils/daemon

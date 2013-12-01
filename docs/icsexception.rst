@@ -4,7 +4,7 @@
 IcsException Common Library
 ===========================
 
-.. automodule:: icsexception
+.. automodule:: opslib.icsexception
    :members:
    :undoc-members:
    :private-members:

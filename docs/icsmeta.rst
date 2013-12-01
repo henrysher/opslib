@@ -4,7 +4,7 @@
 IcsMeta Common Library
 ======================
 
-.. automodule:: icsmeta
+.. automodule:: opslib.icsmeta
    :members:
    :undoc-members:
    :private-members:

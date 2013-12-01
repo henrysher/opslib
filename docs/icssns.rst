@@ -4,7 +4,7 @@
 IcsSNS Common Library
 =====================
 
-.. automodule:: icssns
+.. automodule:: opslib.icssns
    :members:
    :undoc-members:
    :private-members:

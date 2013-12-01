@@ -4,7 +4,7 @@
 IcsUtils.JsonCli Common Library
 ================================
 
-.. automodule:: icsutils.jsoncli
+.. automodule:: opslib.icsutils.jsoncli
    :members:
    :undoc-members:
    :private-members:

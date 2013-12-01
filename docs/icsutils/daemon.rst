@@ -4,7 +4,7 @@
 IcsUtils.Daemon Common Library
 ==============================
 
-.. automodule:: icsutils.daemon
+.. automodule:: opslib.icsutils.daemon
    :members:
    :undoc-members:
    :private-members:

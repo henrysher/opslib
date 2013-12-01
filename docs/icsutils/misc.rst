@@ -4,7 +4,7 @@
 IcsUtils.Misc Common Library
 ============================
 
-.. automodule:: icsutils.misc
+.. automodule:: opslib.icsutils.misc
    :members:
    :undoc-members:
    :private-members:

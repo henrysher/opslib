@@ -4,7 +4,7 @@
 IcsEc2 Common Library
 =====================
 
-.. automodule:: icsec2
+.. automodule:: opslib.icsec2
    :members:
    :undoc-members:
    :private-members:

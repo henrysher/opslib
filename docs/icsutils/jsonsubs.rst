@@ -4,7 +4,7 @@
 IcsUtils.JsonSubs Common Library
 ================================
 
-.. automodule:: icsutils.jsonsubs
+.. automodule:: opslib.icsutils.jsonsubs
    :members:
    :undoc-members:
    :private-members:

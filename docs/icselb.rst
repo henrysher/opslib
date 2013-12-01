@@ -4,7 +4,7 @@
 IcsELB Common Library
 =====================
 
-.. automodule:: icselb
+.. automodule:: opslib.icselb
    :members:
    :undoc-members:
    :private-members:

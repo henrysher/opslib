@@ -4,7 +4,7 @@
 IcsUtils.IcsAlert Common Library
 ================================
 
-.. automodule:: icsutils.icsalert
+.. automodule:: opslib.icsutils.icsalert
    :members:
    :undoc-members:
    :private-members:

@@ -4,7 +4,7 @@
 IcsAS Common Library
 =====================
 
-.. automodule:: icsas
+.. automodule:: opslib.icsas
    :members:
    :undoc-members:
    :private-members:

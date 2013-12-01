@@ -4,7 +4,7 @@
 IcsUtils.CLI Common Library
 ==============================
 
-.. automodule:: icsutils.cli
+.. automodule:: opslib.icsutils.cli
    :members:
    :undoc-members:
    :private-members:

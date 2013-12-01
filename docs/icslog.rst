@@ -5,7 +5,7 @@ IcsLog Common Library
 =====================
 
 
-.. automodule:: icslog
+.. automodule:: opslib.icslog
    :members:
    :undoc-members:
    :private-members:

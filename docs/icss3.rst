@@ -5,7 +5,7 @@ IcsS3 Common Library
 ====================
 
 
-.. automodule:: icss3
+.. automodule:: opslib.icss3
    :members:
    :undoc-members:
    :private-members:
