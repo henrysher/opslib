@@ -24,7 +24,7 @@ import opslib
 from boto.utils import retry_url
 import botocore.session
 from botocore import xform_name
-import opslib.icsutils.augeas as augeas
+
 from opslib.icsutils.sshkey import PublicKey
 from opslib.icsexception import IcsException
 from opslib.icsexception import IcsSysCfgException
@@ -158,6 +158,7 @@ class IcsSysCfg(object):
     ICS Library for System Configuration
     """
     def __init__(self):
+        import opslib.icsutils.augeas as augeas
         self.aug = augeas.Augeas()
 
     def __del__(self):
