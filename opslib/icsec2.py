@@ -17,7 +17,7 @@ from boto.vpc import connect_to_region as vpc_connect_to_region
 from opslib.icsexception import IcsEc2Exception
 
 
-class IcsEc2(object):
+class IcsEc2(EC2Connection):
 
     """
     ICS Library for EC2
@@ -25,7 +25,7 @@ class IcsEc2(object):
 
     def __init__(self, region, **kwargs):
         self.region = region
-        self.conn = EC2Connection(region=get_region(self.region), **kwargs)
+        super(IcsEc2, self).__init__(region=get_region(self.region), **kwargs)
 
     def get_instance_attribute(self, instance_id, attr_name):
         """
@@ -100,7 +100,7 @@ class IcsEc2(object):
             raise IcsEc2Exception(
                 "attr_name should be a 'str' not %s" % type(attr_name))
 
-        resource = self.conn.get_all_instances(instance_ids=instance_id)[0]
+        resource = self.get_all_instances(instance_ids=instance_id)[0]
         instance = resource.instances[0]
         return attrgetter(attr_name)(instance)
 
@@ -163,7 +163,7 @@ class IcsEc2(object):
         :rtype: dict
         :return: a dictionary containing the tags of this instance
         """
-        tags = self.conn.get_all_tags(filters={"resource-id": instance_id})
+        tags = self.get_all_tags(filters={"resource-id": instance_id})
         ret = {}
         for tag in tags:
             ret.update({tag.name: tag.value})
@@ -176,7 +176,7 @@ class IcsEc2(object):
         :type instance_id: string
         :param instance_id: EC2 instance id startwith 'i-xxxxxxx'
         """
-        return self.conn.create_tags(instance_id, tags)
+        return self.create_tags(instance_id, tags)
 
     def del_instance_tags(self, instance_id, tags):
         """
@@ -185,7 +185,7 @@ class IcsEc2(object):
         :type instance_id: string
         :param instance_id: EC2 instance id startwith 'i-xxxxxxx'
         """
-        return self.conn.delete_tags(instance_id, tags)
+        return self.delete_tags(instance_id, tags)
 
     def get_eips_from_addr(self, eip_list):
         """
@@ -197,7 +197,7 @@ class IcsEc2(object):
         :rtype: class
         :return: EIP objects in boto
         """
-        return self.conn.get_all_addresses(
+        return self.get_all_addresses(
             filters={'public-ip': eip_list})
 
     def get_eips_from_instance(self, instance_id):
@@ -210,7 +210,7 @@ class IcsEc2(object):
         :rtype: class
         :return: EIP objects in boto
         """
-        return self.conn.get_all_addresses(
+        return self.get_all_addresses(
             filters={'instance-id': instance_id})
 
     def get_instance_event(self, instance_id):
@@ -220,7 +220,7 @@ class IcsEc2(object):
         :type instance_id: string
         :param instance_id: EC2 instance id startwith 'i-xxxxxxx'
         """
-        result = self.conn.get_all_instance_status(
+        result = self.get_all_instance_status(
             instance_ids=instance_id)
         return result[0].events
 
@@ -235,7 +235,7 @@ class IcsEc2(object):
         :rtype: tuple
         :return: a tuple contains (instance_status, system_status)
         """
-        inst_status = self.conn.get_all_instance_status(
+        inst_status = self.get_all_instance_status(
             instance_ids=instance_id)
         return (inst_status[0].instance_status.status,
                 inst_status[0].system_status.status)
@@ -359,7 +359,7 @@ class IcsEc2(object):
         :rtype: list
         :return: list of boto volume objects
         """
-        return self.conn.get_all_volumes(filters={'instance-id': instance_id})
+        return self.get_all_volumes(filters={'instance-id': instance_id})
 
     def take_snapshot(self, volume_id, description=None, tags=None):
         """
@@ -380,7 +380,7 @@ class IcsEc2(object):
         if tags is None:
             tags = {}
 
-        snapshot = self.conn.create_snapshot(volume_id, description)
+        snapshot = self.create_snapshot(volume_id, description)
 
         tags.update({'VolumeId': volume_id})
         timestamp = strftime("%Y%m%d-%H%M", gmtime())
@@ -425,7 +425,7 @@ class IcsEc2(object):
             refined_tags['tag:Timestamp'] = tags['tag:Timestamp']
             tags = refined_tags
 
-        return self.conn.get_all_snapshots(filters=self.format_tags(tags))
+        return self.get_all_snapshots(filters=self.format_tags(tags))
 
     def fetch_latest_snapshot(self, snapshots):
         """
@@ -515,7 +515,7 @@ class IcsEc2(object):
         :rtype: boolean
         :return: true, false, exception
         """
-        return self.conn.delete_snapshot(snapshot_id)
+        return self.delete_snapshot(snapshot_id)
 
     def find_ami_by_tags(self, tags):
         """
@@ -527,7 +527,7 @@ class IcsEc2(object):
         :rtype: list
         :return: list of boto image objects
         """
-        return self.conn.get_all_images(filters=self.format_tags(tags))
+        return self.get_all_images(filters=self.format_tags(tags))
 
     def fetch_imageid_by_tags(self, **tags):
         """
@@ -554,7 +554,7 @@ class IcsEc2(object):
         :rtype: list
         :return: list of availability zones in this region
         """
-        return [zone.name for zone in self.conn.get_all_zones()]
+        return [zone.name for zone in super(IcsEc2, self).get_all_zones()]
 
     def size_of_all_zones(self):
         """
@@ -588,7 +588,7 @@ class IcsEc2(object):
         else:
             filters = {'vpc-id': vpc_id, 'group-name': name}
 
-        group = self.conn.get_all_security_groups(filters=filters)
+        group = self.get_all_security_groups(filters=filters)
 
         if group and isinstance(group, list):
             return group[0].id
@@ -614,7 +614,7 @@ class IcsEc2(object):
         else:
             filters = {'group-name': name}
 
-        group = self.conn.get_all_security_groups(filters=filters)
+        group = self.get_all_security_groups(filters=filters)
 
         if group:
             return group[0].id
