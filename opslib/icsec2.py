@@ -25,7 +25,8 @@ class IcsEc2(EC2Connection):
 
     def __init__(self, region, **kwargs):
         self.region = region
-        super(IcsEc2, self).__init__(region=get_region(self.region), **kwargs)
+        super(IcsEc2, self).__init__(
+            region=get_region(self.region), **kwargs)
 
     def get_instance_attribute(self, instance_id, attr_name):
         """
@@ -274,10 +275,10 @@ class IcsEc2(EC2Connection):
             raise IcsEc2Exception(
                 "the real eip address %s is not equal to the expected one %s"
                 % (eip_op.public_ip, eip))
-        if eip_op.instance_id == '':
-            return (True, eip_op)
-        else:
+        if eip_op.instance_id:
             return (False, eip_op)
+        else:
+            return (True, eip_op)
 
     def bind_eip(self, eip, instance_id):
         """
@@ -300,7 +301,11 @@ class IcsEc2(EC2Connection):
                                "'%s' will be associated " % eip +
                                "with this instance '%s'"
                                % instance_id)
-            eipop.associate(instance_id=instance_id)
+            if eipop.domain == "vpc":
+                self.associate_address(
+                    instance_id=instance_id, allocation_id=eipop.allocation_id)
+            else:
+                eipop.associate(instance_id=instance_id)
         elif eipop.instance_id != instance_id:
             opslib.logger.warning(
                 "this eip '%s' has been associated with another '%s'"
