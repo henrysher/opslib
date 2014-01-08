@@ -24,7 +24,6 @@ from boto.utils import retry_url
 import botocore.session
 from botocore import xform_name
 from botocore.base import get_data as get_botocore_data
-import opslib.icsutils.augeas as augeas
 from opslib.icsutils.sshkey import PublicKey
 from opslib.icsexception import IcsException
 from opslib.icsexception import IcsSysCfgException
@@ -163,6 +162,7 @@ class IcsSysCfg(object):
     """
 
     def __init__(self):
+        import opslib.icsutils.augeas as augeas
         self.aug = augeas.Augeas()
 
     def __del__(self):
