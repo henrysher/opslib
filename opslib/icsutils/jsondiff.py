@@ -12,8 +12,10 @@ try:
 except ImportError:
     import simplejson as json
 
-import opslib
 from opslib.icsexception import IcsException
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def is_scalar(value):
@@ -25,9 +27,11 @@ def is_scalar(value):
 
 
 class Comparator(object):
+
     """
     Main workhorse for JSON Comparator
     """
+
     def __init__(self, fp1=None, fp2=None,
                  include=[], exclude=[], ignore_add=False):
         """
@@ -148,15 +152,15 @@ class Comparator(object):
         for change_type in result:
             temp_dict = {}
             for key in result[change_type]:
-                opslib.logger.debug("change_type = %s", change_type)
+                log.debug("change_type = %s", change_type)
                 if self.ignore_added and (change_type == "+++"):
                     continue
-                opslib.logger.debug("result[change_type] = %s, key = %s",
-                                    unicode(result[change_type]), key)
-                opslib.logger.debug("self._is_incex_key = %s",
-                                    self._is_incex_key(
-                                        key,
-                                        result[change_type][key]))
+                log.debug("result[change_type] = %s, key = %s",
+                          unicode(result[change_type]), key)
+                log.debug("self._is_incex_key = %s",
+                          self._is_incex_key(
+                              key,
+                              result[change_type][key]))
                 if not self._is_incex_key(key, result[change_type][key]):
                     temp_dict[key] = result[change_type][key]
             if len(temp_dict) > 0:

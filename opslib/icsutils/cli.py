@@ -483,6 +483,7 @@ def extras(help, version, options, doc):
 
 
 class Dict(dict):
+
     def __repr__(self):
         return '{%s}' % ',\n '.join('%r: %r' % i for i in sorted(self.items()))
 
@@ -498,7 +499,7 @@ def docopt(doc, argv=None, help=True, version=None, options_first=False):
     **Parameters**
 
     doc : str
-    	Description of your command-line interface.
+        Description of your command-line interface.
 
     argv : list of str, optional
         Argument vector to be parsed. sys.argv[1:] is used if not
@@ -566,7 +567,7 @@ def docopt(doc, argv=None, help=True, version=None, options_first=False):
     options = parse_defaults(doc)
     pattern = parse_pattern(formal_usage(DocoptExit.usage), options)
     # [default] syntax for argument is disabled
-    #for a in pattern.flat(Argument):
+    # for a in pattern.flat(Argument):
     #    same_name = [d for d in arguments if d.name == a.name]
     #    if same_name:
     #        a.value = same_name[0].value
@@ -575,7 +576,7 @@ def docopt(doc, argv=None, help=True, version=None, options_first=False):
     for options_shortcut in pattern.flat(OptionsShortcut):
         doc_options = parse_defaults(doc)
         options_shortcut.children = list(set(doc_options) - pattern_options)
-        #if any_options:
+        # if any_options:
         #    options_shortcut.children += [Option(o.short, o.long, o.argcount)
         #                    for o in argv if type(o) is Option]
     extras(help, version, argv, doc)

@@ -20,14 +20,17 @@ from types import GeneratorType as generator
 from os.path import join as pathjoin
 from copy import deepcopy
 
-import opslib
 from boto.utils import retry_url
 import botocore.session
 from botocore import xform_name
-
+from botocore.base import get_data as get_botocore_data
+import opslib.icsutils.augeas as augeas
 from opslib.icsutils.sshkey import PublicKey
 from opslib.icsexception import IcsException
 from opslib.icsexception import IcsSysCfgException
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class Retry(object):
@@ -95,8 +98,8 @@ def exec_shell(cmd):
         raise IcsException(
             "the command should be a 'str' not %s" % type(cmd))
     if isinstance(cmd, unicode):
-        ## prior to python v2.7.3, shlex does not support unicode
-        ## do not use "str" to avoid raw unicode
+        # prior to python v2.7.3, shlex does not support unicode
+        # do not use "str" to avoid raw unicode
         cmd = cmd.encode("utf-8")
     pipe = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE)
     stdout, stderr = pipe.communicate()
@@ -154,11 +157,12 @@ def get_userdata(version='latest',
 
 
 class IcsSysCfg(object):
+
     """
     ICS Library for System Configuration
     """
+
     def __init__(self):
-        import opslib.icsutils.augeas as augeas
         self.aug = augeas.Augeas()
 
     def __del__(self):
@@ -193,7 +197,6 @@ class IcsSysCfg(object):
             new_text = ""
             for new_key in new_keys:
                 new_text += new_pub[new_key].text
-        print new_text
         with open(fname, "a") as f:
             f.write(new_text)
 
@@ -261,14 +264,14 @@ class IcsSysCfg(object):
                 for hostkey in ret_host.keys():
                     if 'alias' in hostkey:
                         count += 1
-                path = os.path.join(host, 'alias[%s]' % str(count+1))
+                path = os.path.join(host, 'alias[%s]' % str(count + 1))
                 self.update_cfg(path, hostname)
 
         if flag == 0:
             # FIXME:
             # logger.info("the ipaddr '%s' does not exist in '%s'" % (
             #     ipaddr, fname))
-            prefix = os.path.join(fname, str(len(ret_hosts)+1))
+            prefix = os.path.join(fname, str(len(ret_hosts) + 1))
             path = os.path.join(prefix, 'ipaddr')
             self.update_cfg(path, ipaddr)
             path = os.path.join(prefix, 'canonical')
@@ -459,7 +462,7 @@ def check_error(response_data):
         if 'Errors' in response_data:
             errors = response_data['Errors']
             for error in errors:
-                raise IcsException("Error: %s\n" % error['Message'])
+                raise IcsException("Error: %s\n" % error)
 
 
 def operate(service, cmd, kwargs):
@@ -490,7 +493,7 @@ def drop_null_items(obj):
         # In this fuction, we need to consider these as null items:
         # 1. None; 4. empty sequences; 5. empty dictionaries
 
-        if isinstance(obj[key], bool) and isinstance(obj[key], int):
+        if isinstance(obj[key], bool) or isinstance(obj[key], int):
             continue
         elif not obj[key]:
             del obj[key]
@@ -654,6 +657,23 @@ def format_aws_tags(resource_id, tags):
         new_tag['ResourceId'] = resource_id
         api_tags.append(new_tag)
     return api_tags
+
+
+def fetch_used_params(service_name, cmd_name, params):
+    """
+    Fetch used parameters from the whole configuration
+    """
+    if not isinstance(params, dict):
+        return None
+    path = '/'.join(['aws', service_name, 'operations',
+                    cmd_name, 'input', 'members'])
+    session = botocore.session.get_session()
+    required_params = get_botocore_data(session, path)
+    used_params = {}
+    for key, value in params.iteritems():
+        if key in required_params:
+            used_params.update({key: value})
+    return keyname_formatd(used_params)
 
 
 def gen_timestamp(format="%Y%m%d-%H%M%S"):

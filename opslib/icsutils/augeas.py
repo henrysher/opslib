@@ -69,13 +69,15 @@ def _dlopen(*args):
     """Search for one of the libraries given as arguments and load it.
     Returns the library.
     """
-    libs = [l for l in [ ctypes.util.find_library(a) for a in args ] if l]
-    lib  = reduce(lambda x, y: x or ctypes.cdll.LoadLibrary(y), libs, None)
+    libs = [l for l in [ctypes.util.find_library(a) for a in args] if l]
+    lib = reduce(lambda x, y: x or ctypes.cdll.LoadLibrary(y), libs, None)
     if not lib:
         raise ImportError("Unable to import lib%s!" % args[0])
     return lib
 
+
 class Augeas(object):
+
     "Class wrapper for the augeas library"
 
     # Load libaugeas
@@ -107,15 +109,16 @@ class Augeas(object):
         'flags' is a bitmask made up of values from AUG_FLAGS."""
 
         # Sanity checks
-        if not isinstance(root, string_types) and root != None:
+        if not isinstance(root, string_types) and root is not None:
             raise TypeError("root MUST be a string or None!")
-        if not isinstance(loadpath, string_types) and loadpath != None:
+        if not isinstance(loadpath, string_types) and loadpath is not None:
             raise TypeError("loadpath MUST be a string or None!")
         if not isinstance(flags, int):
             raise TypeError("flag MUST be a flag!")
 
         # Create the Augeas object
-        self.__handle = Augeas._libaugeas.aug_init(enc(root), enc(loadpath), flags)
+        self.__handle = Augeas._libaugeas.aug_init(
+            enc(root), enc(loadpath), flags)
         if not self.__handle:
             raise RuntimeError("Unable to create Augeas object!")
         # Make sure self.__handle is a void*, not an integer
@@ -176,7 +179,7 @@ class Augeas(object):
         # Sanity checks
         if not isinstance(path, string_types):
             raise TypeError("path MUST be a string!")
-        if not isinstance(value, string_types) and type(value) != type(None):
+        if not isinstance(value, string_types) and value is not None:
             raise TypeError("value MUST be a string or None!")
         if not self.__handle:
             raise RuntimeError("The Augeas object has already been closed!")
@@ -196,7 +199,7 @@ class Augeas(object):
         # Sanity checks
         if type(base) != str:
             raise TypeError("base MUST be a string!")
-        if type(sub) != str and sub != None:
+        if type(sub) != str and sub is not None:
             raise TypeError("sub MUST be a string or None!")
         if type(value) != str:
             raise TypeError("value MUST be a string!")
@@ -211,8 +214,9 @@ class Augeas(object):
         return ret
 
     def text_store(self, lens, node, path):
-        """Use the value of node 'node' as a string and transform it into a tree
-        using the lens 'lens' and store it in the tree at 'path', which will be
+        """Use the value of node 'node' as a string
+        and transform it into a tree using the lens 'lens'
+        and store it in the tree at 'path', which will be
         overwritten. 'path' and 'node' are path expressions."""
 
         # Sanity checks
@@ -233,9 +237,11 @@ class Augeas(object):
         return ret
 
     def text_retrieve(self, lens, node_in, path, node_out):
-        """Transform the tree at 'path' into a string using lens 'lens' and store it in
-        the node 'node_out', assuming the tree was initially generated using the
-        value of node 'node_in'. 'path', 'node_in', and 'node_out' are path expressions."""
+        """Transform the tree at 'path' into a string
+        using lens 'lens' and store it in the node 'node_out',
+        assuming the tree was initially generated using the
+        value of node 'node_in'. 'path', 'node_in', and 'node_out'
+        are path expressions."""
 
         # Sanity checks
         if not isinstance(lens, string_types):
@@ -260,17 +266,17 @@ class Augeas(object):
         """Define a variable 'name' whose value is the result of
         evaluating 'expr'. If a variable 'name' already exists, its
         name will be replaced with the result of evaluating 'expr'.
- 
+
         If 'expr' is None, the variable 'name' will be removed if it
         is defined.
- 
+
         Path variables can be used in path expressions later on by
         prefixing them with '$'."""
 
         # Sanity checks
         if type(name) != str:
             raise TypeError("name MUST be a string!")
-        if type(expr) != str and expr != None:
+        if type(expr) != str and expr is not None:
             raise TypeError("expr MUST be a string or None!")
         if not self.__handle:
             raise RuntimeError("The Augeas object has already been closed!")
@@ -286,7 +292,7 @@ class Augeas(object):
         evaluating 'expr', which must not be None and evaluate to a
         nodeset. If a variable 'name' already exists, its name will
         be replaced with the result of evaluating 'expr'.
- 
+
         If 'expr' evaluates to an empty nodeset, a node is created,
         equivalent to calling set(expr, value) and 'name' will be the
         nodeset containing that single node."""
@@ -535,11 +541,12 @@ class Augeas(object):
 
         if name:
             import warnings
-            warnings.warn("name is now deprecated in this function", DeprecationWarning,
-                          stacklevel=2)
-        if isinstance (incl, string_types):
+            warnings.warn(
+                "name is now deprecated in this function", DeprecationWarning,
+                stacklevel=2)
+        if isinstance(incl, string_types):
             incl = [incl]
-        if isinstance (excl, string_types):
+        if isinstance(excl, string_types):
             excl = [excl]
 
         for i in range(len(incl)):
@@ -564,7 +571,8 @@ class Augeas(object):
         if not self.__handle:
             raise RuntimeError("The Augeas object has already been closed!")
 
-        ret = Augeas._libaugeas.aug_transform(self.__handle, enc(lens), enc(file), excl)
+        ret = Augeas._libaugeas.aug_transform(
+            self.__handle, enc(lens), enc(file), excl)
         if ret != 0:
             raise RuntimeError("Unable to add transform!")
 
@@ -585,11 +593,14 @@ class Augeas(object):
 
 # for backwards compatibility
 # pylint: disable-msg=C0103
+
+
 class augeas(Augeas):
+
     "Compat class, obsolete. Use class Augeas directly."
 
     def __init__(self, *p, **k):
         import warnings
         warnings.warn("use Augeas instead of augeas", DeprecationWarning,
-                stacklevel=2)
+                      stacklevel=2)
         super(augeas, self).__init__(*p, **k)

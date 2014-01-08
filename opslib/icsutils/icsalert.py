@@ -10,9 +10,11 @@ IcsAlert: Library for Alert
 from time import strftime
 from time import gmtime
 
-import opslib
 from opslib.icssns import IcsSNS
 from opslib.icsexception import IcsAlertException
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class IcsAlert(object):

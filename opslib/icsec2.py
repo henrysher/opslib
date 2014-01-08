@@ -10,11 +10,13 @@ IcsEc2: Library for EC2
 from operator import attrgetter
 from time import time, mktime, sleep, gmtime, strftime, strptime
 
-import opslib
 from boto.ec2 import get_region
 from boto.ec2.connection import EC2Connection
 from boto.vpc import connect_to_region as vpc_connect_to_region
 from opslib.icsexception import IcsEc2Exception
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class IcsEc2(EC2Connection):
@@ -24,9 +26,8 @@ class IcsEc2(EC2Connection):
     """
 
     def __init__(self, region, **kwargs):
-        self.region = region
         super(IcsEc2, self).__init__(
-            region=get_region(self.region), **kwargs)
+            region=get_region(region), **kwargs)
 
     def get_instance_attribute(self, instance_id, attr_name):
         """
@@ -297,25 +298,25 @@ class IcsEc2(EC2Connection):
 
         result, eipop = self.is_eip_free(eip)
         if result:
-            opslib.logger.info("the eip address " +
-                               "'%s' will be associated " % eip +
-                               "with this instance '%s'"
-                               % instance_id)
+            log.info("the eip address " +
+                     "'%s' will be associated " % eip +
+                     "with this instance '%s'"
+                     % instance_id)
             if eipop.domain == "vpc":
                 self.associate_address(
                     instance_id=instance_id, allocation_id=eipop.allocation_id)
             else:
                 eipop.associate(instance_id=instance_id)
         elif eipop.instance_id != instance_id:
-            opslib.logger.warning(
+            log.warning(
                 "this eip '%s' has been associated with another '%s'"
                 % (eip, eipop.instance_id))
             return False
         else:
-            opslib.logger.info("the eip address " +
-                               "'%s' has been associated " % eip +
-                               "with this instance '%s'"
-                               % instance_id)
+            log.info("the eip address " +
+                     "'%s' has been associated " % eip +
+                     "with this instance '%s'"
+                     % instance_id)
             return True
 
         result, eipop = self.is_eip_free(eip)
@@ -338,18 +339,18 @@ class IcsEc2(EC2Connection):
 
         result, eipop = self.is_eip_free(eip)
         if result:
-            opslib.logger.warning("this eip '%s' is not associated with '%s'"
-                                  % (eip, instance_id))
+            log.warning("this eip '%s' is not associated with '%s'"
+                        % (eip, instance_id))
             return True
         elif eipop.instance_id != instance_id:
-            opslib.logger.warning(
+            log.warning(
                 "this eip '%s' has been associated with another '%s'"
                 % (eip, eipop.instance_id))
             return True
 
-        opslib.logger.info("the eip address " +
-                           "'%s' will be disassociated with this instance '%s'"
-                           % (eip, instance_id))
+        log.info("the eip address " +
+                 "'%s' will be disassociated with this instance '%s'"
+                 % (eip, instance_id))
 
         eipop.disassociate()
         return self.is_eip_free(eip)[0]
@@ -502,7 +503,7 @@ class IcsEc2(EC2Connection):
                                         'Timestamp'], "%Y%m%d-%H%M")
                     timestamp = mktime(tmp_time)
                 except Exception, e:
-                    opslib.logger.error(e)
+                    log.error(e)
                     continue
                 now = mktime(gmtime())
                 if now - timestamp > duration:
@@ -638,7 +639,7 @@ class IcsEc2(EC2Connection):
         """
         if subnet_id is None:
             return self.get_all_zones()
-        vpc = vpc_connect_to_region(self.region)
+        vpc = vpc_connect_to_region(self.region.name)
         subnets = vpc.get_all_subnets(subnet_id)
         if subnets and isinstance(subnets, list):
             return [subnets[0].availability_zone]

@@ -11,11 +11,12 @@ import re
 import base64
 import traceback
 
-import opslib
 from opslib.icsutils.misc import dict_merge
 from opslib.icsexception import IcsException
 
-import jmespath
+import logging
+log = logging.getLogger(__name__)
+
 
 try:
     import simplejson as json
@@ -69,7 +70,7 @@ class DefaultFunc(object):
             for value in args:
                 if not isinstance(value, basestring):
                     break
-                opslib.logger.debug("Including the config file: %s" % value)
+                log.debug("Including the config file: %s" % value)
                 text = dict_merge(text, json.load(open(value, "r")))
             else:
                 return text
@@ -245,7 +246,7 @@ class JsonSubs(object):
             }
         """
         if isinstance(map_name, basestring) and \
-                (not args or isinstance(args, tuple)):
+           (not args or isinstance(args, tuple)):
             if map_name in self.default_vars:
                 tmp = self.default_vars
             elif map_name in self.instance_vars:
@@ -281,20 +282,6 @@ class JsonSubs(object):
             }
         """
         self.builtin.update(customized_func)
-
-    def merge_map(self, key, instance_vars=None, default_vars=None):
-        if self.type_of(key)[0] is None:
-            path = jmespath.compile(key)
-            if path.search(instance_vars):
-                return path.search(instance_vars)
-            elif path.search(default_vars):
-                return path.search(default_vars)
-            else:
-                return None
-        else:
-            return self.merge_map(self.tplsub(key, instance_vars,
-                                              default_vars),
-                                  instance_vars, default_vars)
 
     def merge_str(self, key, instance_vars=None, default_vars=None):
         if key in instance_vars:
@@ -337,15 +324,12 @@ class JsonSubs(object):
             return self.merge_list(key, instance_vars, default_vars)
         elif do_type == "dict":
             return self.merge_dict(key, instance_vars, default_vars)
-        elif do_type == "map":
-            return self.merge_map(key, instance_vars, default_vars)
 
     def pattern(self, esc='$'):
-        regex = "\%s((<.*?>)|(\(.*?\))|({.*?})|(\[.*?\]))" % esc
-        return re.compile(regex)
+        return re.compile("\%s((<.*?>)|(\(.*?\))|({.*?})|(\[.*?\]))" % (esc))
 
-    def search(self, value, esc='$'):
-        m = self.pattern(esc).search(value)
+    def search(self, value):
+        m = self.pattern().search(value)
         if m is None:
             return None
         else:
@@ -365,14 +349,12 @@ class JsonSubs(object):
             key = self.search(value)
             if key is None:
                 return None, None
-            elif key[1] == "(" and key[-1] == ")" and '.' not in key:
+            elif key[1] == "(" and key[-1] == ")":
                 return "str", key[2:-1]
             elif key[1] == "[" and key[-1] == "]":
                 return "list", key[2:-1]
             elif key[1] == "{" and key[-1] == "}":
                 return "dict", key[2:-1]
-            elif key[1] == "<" and key[-1] == ">" and '.' in key:
-                return "map", key[2:-1]
 
         elif isinstance(value, dict):
             key = self.search(value.keys()[0])
@@ -392,8 +374,8 @@ class JsonSubs(object):
     def tplsub_func(self, func, value, instance_vars=None, default_vars=None):
         if func in self.builtin:
             params = self.tplsub(value, instance_vars, default_vars)
-            opslib.logger.debug("Call the func '%s' with params '%s'" %
-                                (func, params))
+            log.debug("Call the func '%s' with params '%s'" %
+                      (func, params))
             try:
                 if isinstance(params, dict):
                     return self.builtin[func](**params)
@@ -444,7 +426,7 @@ class JsonSubs(object):
     def tplsub_str(self, str_value, instance_vars=None, default_vars=None):
         if self.type_of(str_value)[0] is None:
             return str_value
-        opslib.logger.debug("Fetching '%s'..." % str_value)
+        log.debug("Fetching '%s'..." % str_value)
         new_str = self.do_sub(str_value, instance_vars, default_vars)
         return self.update_str(str_value, new_str, instance_vars, default_vars)
 
