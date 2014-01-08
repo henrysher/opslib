@@ -9,8 +9,10 @@ install:
  # Use latest Augeas
   - sudo add-apt-repository -y ppa:raphink/augeas
   - sudo apt-get update
-  - sudo apt-get install libaugeas-dev libxml2-dev
+  - sudo apt-get install make libaugeas-dev libxml2-dev
   - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then pip install --use-mirrors unittest2; fi
   - pip install --use-mirrors -r requirements.txt
   - python setup.py develop
-script: nosetests test
+script:
+  - make -f test/augeas/Makefile
+  - nosetests test

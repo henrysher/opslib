@@ -11,7 +11,7 @@ if not os.path.isdir(__mydir):
 modulepath = os.path.join(__mydir, "../../icsutils")
 sys.path.insert(0, modulepath)
 
-import augeas
+from opslib.icsutils import augeas
 
 MYROOT = __mydir + "/testroot"
 
