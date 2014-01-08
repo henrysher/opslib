@@ -7,15 +7,19 @@ IcsSNS: Library for SNS
 +--------------------+------------+--+
 """
 
-import opslib
 from boto import sns
 from opslib.icsexception import IcsSNSException
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class IcsSNS(object):
+
     """
     ICS Libraray for SNS
     """
+
     def __init__(self, region, **kwargs):
         self.conn = sns.connect_to_region(region, **kwargs)
 

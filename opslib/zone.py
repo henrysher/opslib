@@ -196,7 +196,8 @@ class Zone(object):
                          new_value, new_ttl, new_identifier, comment)
         return Status(self.route53connection, self._commit(changes))
 
-    def update_alias_record(self, old_record, new_identifier=None, comment=""):
+    def update_alias_record(self, old_record, new_identifier=None,
+                            alias_dns_name=None, comment=""):
         """
         Update an existing alias record in this Zone.  Returns a Status object.
 
@@ -208,9 +209,16 @@ class Zone(object):
         record = copy.copy(old_record)
         changes = ResourceRecordSets(self.route53connection, self.id, comment)
         changes.add_change_record("DELETE", record)
-        self._new_alias_record(
-            changes, record.type, record.name, new_identifier,
-            record.alias_hosted_zone_id, record.alias_dns_name, comment)
+
+        if alias_dns_name:
+            self._new_alias_record(
+                changes, record.type, record.name, new_identifier,
+                record.alias_hosted_zone_id, alias_dns_name, comment)
+        else:
+            self._new_alias_record(
+                changes, record.type, record.name, new_identifier,
+                record.alias_hosted_zone_id, record.alias_dns_name, comment)
+
         return Status(self.route53connection, self._commit(changes))
 
     def delete_record(self, record, comment=""):
@@ -423,7 +431,8 @@ class Zone(object):
                                   new_identifier=identifier,
                                   comment=comment)
 
-    def update_alias(self, name, resource_type, identifier=None, comment=""):
+    def update_alias(self, name, resource_type, identifier=None,
+                     alias_dns_name=None, comment=""):
         """
         Update the given alias record in this Zone to a new routing policy,
         Returns a Status object.
@@ -435,7 +444,8 @@ class Zone(object):
         old_record = self.find_records(
             name, resource_type, identifier=identifier)
         if old_record is not None:
-            return self.update_alias_record(old_record, identifier, comment)
+            return self.update_alias_record(old_record, identifier,
+                                            alias_dns_name, comment)
         else:
             return None
 

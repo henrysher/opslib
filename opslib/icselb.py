@@ -11,6 +11,9 @@ import opslib
 from boto.ec2.elb import connect_to_region
 from boto.ec2.elb import HealthCheck
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class IcsELB(object):
 

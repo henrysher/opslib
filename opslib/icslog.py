@@ -1,5 +1,5 @@
 """
-IcsLog: Library for Log 
+IcsLog: Library for Log
 -----------------------
 
 +--------------------+---------------+
@@ -13,28 +13,38 @@ import time
 from logging.handlers import RotatingFileHandler
 
 
-class IcsLog:
+class NullHandler(logging.Handler):
+
+    def emit(self, record):
+        pass
+
+
+class IcsLog(object):
+
     """
     ICS Log Library
     """
-    def __init__(self, name, console = 1, logfile = None):
+
+    def __init__(self, name, console=True, logfile=None, level="DEBUG"):
         """
         Initialize the Ics Log
-        
+
         :type name: string
-        :param name: the logger name, this param should be different for different loggers
+        :param name: the logger name, \
+            this param should be different for different loggers
 
         :type console: int
-        :param console: whether output the log to the console, value should be 0 or 1
+        :param console: whether output the log to the console, \
+            value should be 0 or 1
 
         :type logfile: string
         :param logfile: the file to save the logs
-        
+
         :rtype: class object
         :return: a log object
         """
+        self._level = getattr(logging, level.upper())
 
-        self._level = logging.DEBUG
         self._mode = "a"
         self._max_bytes = 10 * 1024 * 1024
         self._rotate_count = 5
@@ -42,14 +52,17 @@ class IcsLog:
         self._console = console
         self._lock_file = None
         self._fp = None
-
         self._logger = logging.getLogger(name)
         self._logger.setLevel(self._level)
 
-        #logging.Formatter.converter = time.gmtime
-        formatter = logging.Formatter("%(asctime)s\t%(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S %Z")
+        # logging.Formatter.converter = time.gmtime
+        formatter = logging.Formatter(
+            "%(asctime)s\t%(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S %Z")
 
-        if self._console == 1:
+        if not self._console and self._log_file is None:
+            self._logger.addHandler(NullHandler())
+
+        if self._console:
             stream_handler = logging.StreamHandler()
             stream_handler.setFormatter(formatter)
             self._logger.addHandler(stream_handler)
@@ -57,13 +70,18 @@ class IcsLog:
         if self._log_file is not None:
             self._lock_file = logfile + ".lock"
 
-            rotate_handler = RotatingFileHandler(filename = self._log_file , mode = self._mode , maxBytes= self._max_bytes , backupCount = self._rotate_count)
+            rotate_handler = RotatingFileHandler(
+                filename=self._log_file,
+                mode=self._mode,
+                maxBytes=self._max_bytes,
+                backupCount=self._rotate_count)
             rotate_handler.setFormatter(formatter)
             self._logger.addHandler(rotate_handler)
 
     def set_debug_level(self):
         """
-        Sets the threshold for this logger to debug. Logging messages will all be printed
+        Sets the threshold for this logger to debug.
+        Logging messages will all be printed.
         """
 
         if self._logger is not None:
@@ -71,7 +89,8 @@ class IcsLog:
 
     def set_info_level(self):
         """
-        Sets the threshold for this logger to info. Logging messages which are less severe than info will be ignored.
+        Sets the threshold for this logger to info.
+        Logging messages which are less severe than info will be ignored.
         """
 
         if self._logger is not None:
@@ -79,7 +98,8 @@ class IcsLog:
 
     def set_warning_level(self):
         """
-        Sets the threshold for this logger to warning. Logging messages which are less severe than warning will be ignored.
+        Sets the threshold for this logger to warning.
+        Logging messages which are less severe than warning will be ignored.
         """
 
         if self._logger is not None:
@@ -87,7 +107,8 @@ class IcsLog:
 
     def set_error_level(self):
         """
-        Sets the threshold for this logger to error. Logging messages which are less severe than error will be ignored.
+        Sets the threshold for this logger to error.
+        Logging messages which are less severe than error will be ignored.
         """
 
         if self._logger is not None:
@@ -95,7 +116,8 @@ class IcsLog:
 
     def set_critical_level(self):
         """
-        Sets the threshold for this logger to critical. Logging messages which are less severe than critical will be ignored.
+        Sets the threshold for this logger to critical.
+        Logging messages which are less severe than critical will be ignored.
         """
 
         if self._logger is not None:
@@ -108,13 +130,13 @@ class IcsLog:
         if self._lock_file is not None:
             self._fp = open(self._lock_file, 'w')
             if self._fp is not None:
-                fcntl.flock(self._fp, fcntl.LOCK_EX)              
+                fcntl.flock(self._fp, fcntl.LOCK_EX)
 
     def _unlock(self):
         """
         Unlock the file
         """
-        
+
         if self._fp is not None:
             fcntl.flock(self._fp, fcntl.LOCK_UN)
             self._fp.close()
@@ -127,10 +149,11 @@ class IcsLog:
         :param msg: message format string
 
         :type args: arguments
-        :param args: the arguments which are merged into msg using the string formatting operator
+        :param args: the arguments which are merged into msg \
+            using the string formatting operator
 
         :type kwargs: not recommended to use
-        :param kwargs: not recommended to use 
+        :param kwargs: not recommended to use
         """
 
         if self._logger is not None:
@@ -146,10 +169,11 @@ class IcsLog:
         :param msg: message format string
 
         :type args: arguments
-        :param args: the arguments which are merged into msg using the string formatting operator
+        :param args: the arguments which are merged into msg \
+            using the string formatting operator
 
         :type kwargs: not recommended to use
-        :param kwargs: not recommended to use 
+        :param kwargs: not recommended to use
         """
 
         if self._logger is not None:
@@ -165,10 +189,11 @@ class IcsLog:
         :param msg: message format string
 
         :type args: arguments
-        :param args: the arguments which are merged into msg using the string formatting operator
+        :param args: the arguments which are merged into msg \
+            using the string formatting operator
 
         :type kwargs: not recommended to use
-        :param kwargs: not recommended to use 
+        :param kwargs: not recommended to use
         """
 
         if self._logger is not None:
@@ -184,10 +209,11 @@ class IcsLog:
         :param msg: message format string
 
         :type args: arguments
-        :param args: the arguments which are merged into msg using the string formatting operator
+        :param args: the arguments which are merged into msg \
+            using the string formatting operator
 
         :type kwargs: not recommended to use
-        :param kwargs: not recommended to use 
+        :param kwargs: not recommended to use
         """
 
         if self._logger is not None:
@@ -203,10 +229,11 @@ class IcsLog:
         :param msg: message format string
 
         :type args: arguments
-        :param args: the arguments which are merged into msg using the string formatting operator
+        :param args: the arguments which are merged into msg \
+            using the string formatting operator
 
         :type kwargs: not recommended to use
-        :param kwargs: not recommended to use 
+        :param kwargs: not recommended to use
         """
 
         if self._logger is not None:
@@ -222,15 +249,17 @@ class IcsLog:
         :param msg: message format string
 
         :type args: arguments
-        :param args: the arguments which are merged into msg using the string formatting operator
+        :param args: the arguments which are merged into msg \
+            using the string formatting operator
 
         :type kwargs: not recommended to use
-        :param kwargs: not recommended to use 
+        :param kwargs: not recommended to use
         """
 
         if self._logger is not None:
             self._lock()
             self._logger.exception(msg, *args, **kwargs)
             self._unlock()
+
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4

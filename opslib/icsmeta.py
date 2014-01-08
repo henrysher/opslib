@@ -12,7 +12,6 @@ import re
 import json
 import time
 
-import opslib
 from boto import config
 from boto.utils import get_instance_metadata as get_metadata
 from opslib.icss3 import IcsS3
@@ -22,8 +21,12 @@ from opslib.icsutils.misc import is_valid_ip
 from opslib.icsutils.icsalert import IcsAlert
 from opslib.icsexception import IcsMetaException
 
+import logging
+log = logging.getLogger(__name__)
+
 
 class IcsMeta(object):
+
     def __init__(self):
         """
         Initialize Ics Meta (meta-data, user-data, credentials, tags)
@@ -255,7 +258,7 @@ class IcsMeta(object):
         else:
             ec2conn = IcsEc2(region, **self.credentials)
 
-        for i in xrange(timeout/5):
+        for i in xrange(timeout / 5):
             result = ec2conn.get_instance_tags(instance_id)
             if result:
                 return result
@@ -447,9 +450,8 @@ class IcsMeta(object):
         else:
             alert = IcsAlert(
                 sns_region, sns_topic, msg_prefix, **self.credentials)
-        # FIXME:
-        # logger.info("Alert setup in SNS topic '%s' with the prefix '%s'" %
-        #             (sns_topic, msg_prefix))
+        log.info("Alert setup in SNS topic '%s' with the prefix '%s'" %
+                (sns_topic, msg_prefix))
         return alert
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4

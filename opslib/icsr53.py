@@ -10,13 +10,15 @@ IcsR53: Library for Route53
 import time
 import string
 
-import opslib
 from boto.route53 import Route53Connection
 #from boto.route53.zone import Zone
 from boto.route53.record import ResourceRecordSets
 from boto.route53 import exception
 from opslib.icsexception import IcsR53Exception
 from opslib.zone import Zone
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class IcsR53(object):
@@ -323,7 +325,7 @@ class IcsR53(object):
                                       new_ttl=ttl,
                                       new_identifier=identifier)
 
-    def update_alias(self, name, type, identifier=None):
+    def update_alias(self, name, type, identifier=None, alias_dns_name=None):
         """
         Update the given alias record in this Zone to a new routing policy
         Returns a Status object.
@@ -331,7 +333,7 @@ class IcsR53(object):
         Will throw TooManyRecordsException is name, value does not match
         a single record.
         """
-        return self.zone.update_alias(name, type, identifier)
+        return self.zone.update_alias(name, type, identifier, alias_dns_name)
 
     def delete_cname(self, name, identifier=None, all=False):
         """

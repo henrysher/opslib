@@ -7,7 +7,6 @@ IcsAS: Library for Auto Scaling
 +--------------------+------------+--+
 """
 
-import opslib
 from boto.ec2.autoscale import regions
 from boto.ec2.autoscale import AutoScaleConnection
 from opslib.icsutils.misc import dict_merge
@@ -17,7 +16,11 @@ from opslib.icsutils.misc import clean_empty_items
 from opslib.icsutils.misc import init_botocore_service, operate
 from opslib.icsutils.misc import filter_resource_from_json
 from opslib.icsutils.misc import keyname_formatd
+from opslib.icsutils.misc import fetch_used_params
 from opslib.icsexception import IcsASException
+
+import logging
+log = logging.getLogger(__name__)
 
 
 def get_region(region_name, **kw_params):
@@ -39,9 +42,11 @@ def get_region(region_name, **kw_params):
 
 
 class IcsAS(object):
+
     """
     ICS Library for AutoScale
     """
+
     def __init__(self, region, **kwargs):
         self.conn = AutoScaleConnection(region=get_region(region), **kwargs)
 
@@ -267,15 +272,19 @@ class IcsAS(object):
 
 
 class RawAS(object):
+
     """
     Raw Library for AutoScale, based on Botocore
     """
+
     def __init__(self, region):
         """
         Initialize the proper botocore service
         """
-        name = "autoscaling"
-        self.service, self.endpoint = init_botocore_service(name, region)
+        self.name = "autoscaling"
+        self.region = region
+        self.service, self.endpoint = init_botocore_service(
+            self.name, self.region)
 
     def fetch_all_groups(self):
         """
@@ -514,25 +523,25 @@ class RawAS(object):
             launch_config.pop('LaunchConfigurationARN')
 
         if launch_config == launch_data:
-            opslib.logger.info("no need to update the launch configuration")
+            log.info("no need to update the launch configuration")
         else:
-            opslib.logger.info("update the launch configuration")
+            log.info("update the launch configuration")
             new_lc_name = self.modify_launch_config(launch_config)
             group_config['LaunchConfigurationName'] = new_lc_name
-            opslib.logger.info("New launch configuration name:")
-            opslib.logger.info(">> %s" % new_lc_name)
+            log.info("New launch configuration name:")
+            log.info(">> %s" % new_lc_name)
 
-        opslib.logger.info("update the auto-scaling group")
+        log.info("update the auto-scaling group")
         try:
-            opslib.logger.info(self.modify_group(group_config))
+            log.info(self.modify_group(group_config))
         except Exception, e:
-            opslib.logger.error(e)
-            opslib.logger.info("delete the new launch configuration:")
-            opslib.logger.info(">> %s" % new_lc_name)
+            log.error(e)
+            log.info("delete the new launch configuration:")
+            log.info(">> %s" % new_lc_name)
             return self.delete_launch_config(new_lc_name)
         else:
-            opslib.logger.info("delete the old launch configuration:")
-            opslib.logger.info(">> %s" % lc_name)
+            log.info("delete the old launch configuration:")
+            log.info(">> %s" % lc_name)
             return self.delete_launch_config(lc_name)
 
     def launch_group(self, group_config, launch_config):
@@ -549,13 +558,13 @@ class RawAS(object):
         try:
             response = self.create_launch_config(launch_config)
         except Exception, e:
-            opslib.logger.error(e)
+            log.error(e)
         else:
             result['CreateLaunchConfiguration'] = response
         try:
             response = self.create_group(group_config)
         except Exception, e:
-            opslib.logger.error(e)
+            log.error(e)
         else:
             result['CreateAutoScalingGroup'] = response
         return result
@@ -579,22 +588,96 @@ class RawAS(object):
             error_msg = "auto-scaling group '%s' " % group_name + \
                 "has running instances, " + \
                 "if you have to kill it forcely, " + \
-                "please use '--force'"
+                "please use '-force'"
             return error_msg
 
         result = {}
         try:
             response = self.delete_group(group_name)
         except Exception, e:
-            opslib.logger.error(e)
+            log.error(e)
         else:
             result['DeleteAutoScalingGroup'] = response
         try:
             response = self.delete_launch_config(lc_name)
         except Exception, e:
-            opslib.logger.error(e)
+            log.error(e)
         else:
             result['DeleteLaunchConfiguration'] = response
         return result
+
+    def new_scaling_policy(self, scaling_policy, metric_alarm):
+        """
+        Create a new Scaling Policy
+
+        :type scaling_policy: dict
+        :param scaling_policy: scaling policy configuration
+
+        :type metric_alarm: dict
+        :param metric_alarm: metric alarm configuration
+        """
+        endpoint = {'endpoint': self.endpoint}
+        cmd = "PutScalingPolicy"
+        params = fetch_used_params(self.name, cmd, scaling_policy)
+        params.update(endpoint)
+
+        try:
+            response = operate(self.service, cmd, params)
+        except Exception, e:
+            log.error("Failed to create this scaling policy...")
+            raise IcsASException(e)
+        policy_arn = self.handle_response(response)[1]['PolicyARN']
+
+        # FIXME: special here, just for cloudwatch service
+        name = "cloudwatch"
+        service, endpoint = init_botocore_service(name, self.region)
+        endpoint = {'endpoint': endpoint}
+        cmd = "PutMetricAlarm"
+        metric_alarm['AlarmActions'].append(policy_arn)
+        params = fetch_used_params(name, cmd, metric_alarm)
+        params.update(endpoint)
+        try:
+            response = operate(service, cmd, params)
+        except Exception, e:
+            log.error("Failed to create this metric alarm...")
+            raise IcsASException(e)
+        return self.handle_response(response)[0]
+
+    def delete_scaling_policy(self, scaling_policy, metric_alarm):
+        """
+        Delete an existing Scaling Policy
+
+        :type scaling_policy: dict
+        :param scaling_policy: scaling policy configuration
+
+        :type metric_alarm: dict
+        :param metric_alarm: metric alarm configuration
+        """
+        endpoint = {'endpoint': self.endpoint}
+        cmd = "DeletePolicy"
+        params = fetch_used_params(self.name, cmd, scaling_policy)
+        params.update(endpoint)
+
+        try:
+            response = operate(self.service, cmd, params)
+        except Exception, e:
+            log.error("Failed to delete this scaling policy...")
+            log.error(e)
+
+        # FIXME: special here, just for cloudwatch service
+        name = "cloudwatch"
+        service, endpoint = init_botocore_service(name, self.region)
+        endpoint = {'endpoint': endpoint}
+        cmd = "DeleteAlarms"
+        metric_alarm['AlarmNames'] = [metric_alarm['AlarmName']]
+        params = fetch_used_params(name, cmd, metric_alarm)
+        params.update(endpoint)
+
+        try:
+            response = operate(service, cmd, params)
+        except Exception, e:
+            log.error("Failed to delete this metric alarm...")
+            raise IcsASException(e)
+        return self.handle_response(response)[0]
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4

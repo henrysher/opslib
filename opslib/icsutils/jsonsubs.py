@@ -11,9 +11,11 @@ import re
 import base64
 import traceback
 
-import opslib
 from opslib.icsutils.misc import dict_merge
 from opslib.icsexception import IcsException
+
+import logging
+log = logging.getLogger(__name__)
 
 import jmespath
 
@@ -69,7 +71,7 @@ class DefaultFunc(object):
             for value in args:
                 if not isinstance(value, basestring):
                     break
-                opslib.logger.debug("Including the config file: %s" % value)
+                log.debug("Including the config file: %s" % value)
                 text = dict_merge(text, json.load(open(value, "r")))
             else:
                 return text
@@ -392,8 +394,8 @@ class JsonSubs(object):
     def tplsub_func(self, func, value, instance_vars=None, default_vars=None):
         if func in self.builtin:
             params = self.tplsub(value, instance_vars, default_vars)
-            opslib.logger.debug("Call the func '%s' with params '%s'" %
-                                (func, params))
+            log.debug("Call the func '%s' with params '%s'" %
+                     (func, params))
             try:
                 if isinstance(params, dict):
                     return self.builtin[func](**params)
@@ -444,7 +446,7 @@ class JsonSubs(object):
     def tplsub_str(self, str_value, instance_vars=None, default_vars=None):
         if self.type_of(str_value)[0] is None:
             return str_value
-        opslib.logger.debug("Fetching '%s'..." % str_value)
+        log.debug("Fetching '%s'..." % str_value)
         new_str = self.do_sub(str_value, instance_vars, default_vars)
         return self.update_str(str_value, new_str, instance_vars, default_vars)
 

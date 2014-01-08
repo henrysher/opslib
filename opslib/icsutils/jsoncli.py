@@ -27,6 +27,7 @@ type_map = {
 
 
 class OrderNamespace(argparse.Namespace):
+
     """
     Namespace with Order: from argparse.Namespace
     """

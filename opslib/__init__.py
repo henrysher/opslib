@@ -9,7 +9,7 @@ from os.path import join as pathjoin
 
 import boto
 
-__version__ = "1.0.0"
+__version__ = "0.0.1"
 
 CONFIG = "opslib.ini"
 LOG_NAME = "opslib"
@@ -17,51 +17,49 @@ AWS_ACCESS_KEY_NAME = "aws_access_key_id"
 AWS_SECRET_KEY_NAME = "aws_secret_access_key"
 
 
-def init_boto_config(filepath=None):
+def init_config(filepath=None, enable_boto=True, enable_botocore=False):
+    # Default credential file will be located at current folder
     if filepath is None or not os.path.exists(filepath):
         pwdpath = dirname(realpath(__file__))
         filepath = pathjoin(pwdpath, CONFIG)
 
-    from boto.pyami.config import Config
-    boto.config = Config(filepath)
+    if enable_boto:
+        # Initialize credentials for boto
+        from boto.pyami.config import Config
+        boto.config = Config(filepath)
 
-    access_key = boto.config.get('Credentials', AWS_ACCESS_KEY_NAME, None)
-    secret_key = boto.config.get('Credentials', AWS_SECRET_KEY_NAME, None)
-    if not access_key or not secret_key:
-        boto.config.remove_section('Credentials')
+        access_key = boto.config.get('Credentials', AWS_ACCESS_KEY_NAME, None)
+        secret_key = boto.config.get('Credentials', AWS_SECRET_KEY_NAME, None)
 
-    return access_key, secret_key
+        # FIXME: a trick when the value is empty
+        if not access_key or not secret_key:
+            boto.config.remove_section('Credentials')
 
+    if enable_botocore:
+        # Initialize credentials for botocore
+        import botocore.credentials
 
-def init_botocore_config(filepath=None):
-    if filepath is None or not os.path.exists(filepath):
-        pwdpath = dirname(realpath(__file__))
-        filepath = pathjoin(pwdpath, CONFIG)
-
-    access_key, secret_key = init_boto_config(filepath)
-    import botocore.credentials
+        if access_key and secret_key:
+            def get_credentials(session, metadata=None):
+                return botocore.credentials.Credentials(access_key, secret_key)
+            botocore.credentials.get_credentials = get_credentials
 
     if access_key and secret_key:
-        def get_credentials(session, metadata=None):
-            return botocore.credentials.Credentials(access_key, secret_key)
-        botocore.credentials.get_credentials = get_credentials
+        return access_key, secret_key
 
 
 def init_logging(name=LOG_NAME, logfile=None,
-                 console=0, loglevel="info",
+                 console=False, loglevel="INFO",
                  enable_boto_log=False):
     global logger
-    from icslog import IcsLog
-
-    logger = IcsLog(name, console=console, logfile=logfile)
-    func_name = "".join(["set_", loglevel.lower(), "_level"])
-    getattr(logger, func_name)()
+    from opslib.icslog import IcsLog
+    logger = IcsLog(name, level=loglevel, console=console, logfile=logfile)
 
     if enable_boto_log:
         boto.log = logger
     return logger
 
-init_boto_config()
+init_config()
 init_logging()
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4

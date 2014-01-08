@@ -6,10 +6,13 @@ IcsSecurityGroup: Library for AWS Security group
 | This is the IcsSeurityGroup common library. |
 +--------------------+------------+-----------+
 """
+import traceback
 from boto.ec2 import get_region
 from boto.ec2.connection import EC2Connection
-from boto.rds import connect_to_region 
-import traceback
+from boto.rds import connect_to_region
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class IcsSGroup(object):
@@ -21,7 +24,7 @@ class IcsSGroup(object):
     def __init__(self, region, **kwargs):
         self.conn = EC2Connection(region=get_region(region), **kwargs)
         self.rds = connect_to_region(region, **kwargs)
-        
+
     def create_rds_group(self, name, description=None):
         """
         Create a new security group for your account.
@@ -62,13 +65,13 @@ class IcsSGroup(object):
         return self.conn.create_security_group(name, description, vpc_id)
 
     def rds_authorize_group(self, group_name, cidr_ip=None,
-            src_group_name=None, src_group_owner_id=None):
+                            src_group_name=None, src_group_owner_id=None):
         """
         Add a new rule to an existing security group.
         You need to pass in either src_security_group_name and
         src_security_group_owner_id OR a CIDR block but not both.
 
-        :param group_name: The name of the security group you are adding the rule to.
+        :param group_name: The name of the security group adding the rule to.
         :type group_name: string
 
         :param cidr_ip: The CIDR block you are providing access to.
@@ -86,10 +89,11 @@ class IcsSGroup(object):
         :tyep: bool
         """
 
-        return self.rds.authorize_dbsecurity_group(group_name,
-                cidr_ip=cidr_ip,
-                ec2_security_group_name=src_group_name,
-                ec2_security_group_owner_id=src_group_owner_id)
+        return self.rds.authorize_dbsecurity_group(
+            group_name,
+            cidr_ip=cidr_ip,
+            ec2_security_group_name=src_group_name,
+            ec2_security_group_owner_id=src_group_owner_id)
 
     def add_ingress_rules(self, group_name, src_group=None,
                           ip_protocol=None, from_port=None, to_port=None,
@@ -132,14 +136,14 @@ class IcsSGroup(object):
         """
 
         return self.conn.authorize_security_group(
-                group_name=group_name,
-                src_security_group_name=src_group,
-                ip_protocol=ip_protocol,
-                from_port=from_port,
-                to_port=to_port,
-                cidr_ip=cidr_ip,
-                group_id=group_id,
-                src_security_group_group_id=src_group_id)
+            group_name=group_name,
+            src_security_group_name=src_group,
+            ip_protocol=ip_protocol,
+            from_port=from_port,
+            to_port=to_port,
+            cidr_ip=cidr_ip,
+            group_id=group_id,
+            src_security_group_group_id=src_group_id)
 
     def add_egress_rules(self, group_id, ip_protocol, from_port=None,
                          to_port=None, cidr_ip=None, des_group_id=None):
@@ -167,15 +171,15 @@ class IcsSGroup(object):
         """
 
         self.conn.authorize_security_group_egress(
-                group_id=group_id,
-                ip_protocol=ip_protocol,
-                from_port=from_port,
-                to_port=to_port,
-                cidr_ip=cidr_ip,
-                des_group_id=des_group_id)
+            group_id=group_id,
+            ip_protocol=ip_protocol,
+            from_port=from_port,
+            to_port=to_port,
+            cidr_ip=cidr_ip,
+            des_group_id=des_group_id)
 
     def rds_revoke_rules(self, group_name, src_group_name=None,
-            src_group_owner_id=None, cidr_ip=None):
+                         src_group_owner_id=None, cidr_ip=None):
         """
         Remove an existing rule from an existing security group.
         You need to pass in either ec2_security_group_name and
@@ -200,10 +204,11 @@ class IcsSGroup(object):
         :type: bool
         """
 
-        return self.rds.revoke_dbsecurity_group(group_name,
-                ec2_security_group_name=src_group_name,
-                ec2_security_group_owner_id=src_group_owner_id,
-                cidr_ip=cidr_ip)
+        return self.rds.revoke_dbsecurity_group(
+            group_name,
+            ec2_security_group_name=src_group_name,
+            ec2_security_group_owner_id=src_group_owner_id,
+            cidr_ip=cidr_ip)
 
     def remove_ingress_rules(self, group_name, src_group=None,
                              ip_protocol=None, from_port=None, to_port=None,
@@ -242,14 +247,14 @@ class IcsSGroup(object):
         """
 
         return self.conn.revoke_security_group(
-                group_name=group_name,
-                src_security_group_name=src_group,
-                ip_protocol=ip_protocol,
-                from_port=from_port,
-                to_port=to_port,
-                cidr_ip=cidr_ip,
-                group_id=group_id,
-                src_security_group_group_id=src_group_id)
+            group_name=group_name,
+            src_security_group_name=src_group,
+            ip_protocol=ip_protocol,
+            from_port=from_port,
+            to_port=to_port,
+            cidr_ip=cidr_ip,
+            group_id=group_id,
+            src_security_group_group_id=src_group_id)
 
     def get_security_groups(self, groupnames=None,
                             group_ids=None, filters=None):
@@ -274,5 +279,5 @@ class IcsSGroup(object):
         """
 
         return self.conn.get_all_security_groups(
-                    groupnames=groupnames,
-                    group_ids=group_ids, filters=filters)
+            groupnames=groupnames,
+            group_ids=group_ids, filters=filters)
