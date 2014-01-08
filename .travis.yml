@@ -14,5 +14,5 @@ install:
   - pip install --use-mirrors -r requirements.txt
   - python setup.py develop
 script:
-  - make -f test/augeas/Makefile
+  - python test/augeas/Makefile
   - nosetests test

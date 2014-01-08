@@ -8,9 +8,6 @@ __mydir = os.path.dirname(sys.argv[0])
 if not os.path.isdir(__mydir):
     __mydir = os.getcwd()
 
-modulepath = os.path.join(__mydir, "../../icsutils")
-sys.path.insert(0, modulepath)
-
 from opslib.icsutils import augeas
 
 MYROOT = __mydir + "/testroot"
