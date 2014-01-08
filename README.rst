@@ -1,7 +1,7 @@
 ######
 opslib
 ######
-opslib 0.0.1
+opslib v0.0.1
 
 .. image:: https://travis-ci.org/henrysher/opslib.png?branch=master
         :target: https://travis-ci.org/henrysher/opslib
@@ -10,7 +10,7 @@ opslib 0.0.1
 Introduction
 ************
 
-OpsLib is a Python package that provides useful libraries and utilities to AWS Operations.
+opslib is a Python package that provides useful libraries and utilities to AWS Operations.
 
 
 **********
