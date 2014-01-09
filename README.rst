@@ -3,8 +3,17 @@ opslib
 ######
 
 .. image:: https://travis-ci.org/henrysher/opslib.png?branch=master
-        :target: https://travis-ci.org/henrysher/opslib
-
+        :target: https://travis-ci.org/henrysher/
+.. image:: https://pypip.in/v/opslib/badge.png
+    :target: https://pypi.python.org/pypi/opslib/
+    :alt: Latest Version
+.. image:: https://pypip.in/d/opslib/badge.png
+    :target: https://pypi.python.org/pypi//opslib/
+    :alt: Downloads
+.. image:: https://pypip.in/license/opslib/badge.png
+    :target: https://pypi.python.org/pypi/opslib/
+    :alt: License
+    
 ************
 Introduction
 ************
