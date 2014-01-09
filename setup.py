@@ -1,19 +1,24 @@
 #!/usr/bin/env python
 
-from setuptools import setup
+try:
+    from setuptools import setup
+    setup
+except ImportError:
+    from distutils.core import setup
+
 import opslib
 
 setup(name='opslib',
       version=opslib.__version__,
-      description='Library for AWS Operations',
-      packages=['opslib', 'opslib.icsutils'],
+      sescription='Library for AWS Operations',
+      packages=["opslib", "opslib.icsutils"],
       package_data={"opslib": ["opslib.ini"]},
-      author = "Henry Huang",
-      author_email = "henry.s.huang@gmail.com",
+      author="Henry Huang",
+      author_email="henry.s.huang@gmail.com",
       url="https://github.com/henrysher/opslib",
       license='Apache 2.0',
       include_package_data=True,
-      classifiers= [
+      classifiers=[
           'Development Status :: 2 - Pre-Alpha',
           'Intended Audience :: Developers',
           'Intended Audience :: Information Technology',
@@ -26,9 +31,9 @@ setup(name='opslib',
           'Topic :: Utilities',
       ],
       install_requires=[
-        'setuptools',
-        'boto',
-        'botocore',
-        'argcomplete',
+          'setuptools',
+          'boto',
+          'botocore',
+          'argcomplete',
       ],
-     )
+      )
