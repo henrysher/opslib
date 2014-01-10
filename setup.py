@@ -10,7 +10,7 @@ import opslib
 
 setup(name='opslib',
       version=opslib.__version__,
-      sescription='Library for AWS Operations',
+      description='Library for AWS Operations',
       packages=["opslib", "opslib.icsutils"],
       package_data={"opslib": ["opslib.ini"]},
       author="Henry Huang",
