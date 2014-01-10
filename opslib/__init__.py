@@ -9,7 +9,7 @@ from os.path import join as pathjoin
 
 import boto
 
-__version__ = "0.0.3.1"
+__version__ = "0.0.3.2"
 
 CONFIG = "opslib.ini"
 LOG_NAME = "opslib"
