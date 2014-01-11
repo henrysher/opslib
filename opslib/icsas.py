@@ -143,6 +143,8 @@ class IcsAS(object):
         :rtype: string
         :return: AWS request Id
         """
+        log.info("delete the launch configuration:")
+        log.info(">> %s" % name)
         return self.conn.delete_launch_configuration(name)
 
     def update_launch_config(self, name, launch_config):
@@ -176,7 +178,7 @@ class IcsAS(object):
             if group.launch_config_name == new_lc_name:
                 return self.delete_launch_config_from_name(old_lc_name)
             else:
-                raise IcsASException("Failed to update " +
+                raise IcsASException("failed to update " +
                                      "launch config for ASG '%s'"
                                      % name)
         else:
@@ -329,7 +331,7 @@ class RawAS(object):
         Handle the botocore response
         """
         if response[0].status_code == 200:
-            return response[0].reason, response[1]
+            return response[1]
         raise IcsASException("Status Code: %s; Reason: %s" % (
             response[0].status_code, response[0].reason))
 
@@ -346,12 +348,14 @@ class RawAS(object):
         params = {key: [name]}
         params = keyname_formatd(params)
         params.update(endpoint)
+        log.info("find the auto-scaling group")
+        log.info(">> %s" % name)
         try:
             response = operate(self.service, cmd, params)
         except Exception, e:
             raise IcsASException(e)
 
-        result, data = self.handle_response(response)
+        data = self.handle_response(response)
         groups = data['AutoScalingGroups']
         if not groups:
             raise IcsASException(
@@ -359,6 +363,7 @@ class RawAS(object):
         elif len(groups) > 1:
             raise IcsASException(
                 "too many auto-scaling groups found: '%s'" % group)
+        log.info("OK")
         return groups[0]
 
     def fetch_launch_config(self, name):
@@ -374,13 +379,14 @@ class RawAS(object):
         params = {key: [name]}
         params = keyname_formatd(params)
         params.update(endpoint)
-
+        log.info("find the launch configuration")
+        log.info(">> %s" % name)
         try:
             response = operate(self.service, cmd, params)
         except Exception, e:
             raise IcsASException(e)
 
-        result, data = self.handle_response(response)
+        data = self.handle_response(response)
         lcs = data['LaunchConfigurations']
         if not lcs:
             raise IcsASException(
@@ -388,6 +394,7 @@ class RawAS(object):
         elif len(lcs) > 1:
             raise IcsASException(
                 "too many auto-scaling groups found: '%s'" % lcs)
+        log.info("OK")
         return lcs[0]
 
     def create_group(self, group_config):
@@ -401,11 +408,13 @@ class RawAS(object):
         params = keyname_formatd(group_config)
         params.update(endpoint)
         cmd = "CreateAutoScalingGroup"
+        log.info("create the auto-scaling group")
+        log.info(">> %s" % group_config['AutoScalingGroupName'])
         try:
-            response = operate(self.service, cmd, params)
+            self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
             raise IcsASException(e)
-        return self.handle_response(response)[0]
+        log.info("OK")
 
     def create_launch_config(self, launch_config):
         """
@@ -418,11 +427,13 @@ class RawAS(object):
         params = keyname_formatd(launch_config)
         params.update(endpoint)
         cmd = "CreateLaunchConfiguration"
+        log.info("create the launch configuration")
+        log.info(">> %s" % launch_config['LaunchConfigurationName'])
         try:
-            response = operate(self.service, cmd, params)
+            self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
             raise IcsASException(e)
-        return self.handle_response(response)[0]
+        log.info("OK")
 
     def delete_group(self, name):
         """
@@ -438,11 +449,13 @@ class RawAS(object):
         params['ForceDelete'] = True
         params = keyname_formatd(params)
         params.update(endpoint)
+        log.info("delete the auto-scaling group")
+        log.info(">> %s" % name)
         try:
-            response = operate(self.service, cmd, params)
+            self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
             raise IcsASException(e)
-        return self.handle_response(response)[0]
+        log.info("OK")
 
     def delete_launch_config(self, name):
         """
@@ -457,11 +470,13 @@ class RawAS(object):
         params = {key: name}
         params = keyname_formatd(params)
         params.update(endpoint)
+        log.info("delete the launch configuration")
+        log.info(">> %s" % name)
         try:
-            response = operate(self.service, cmd, params)
+            self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
             raise IcsASException(e)
-        return self.handle_response(response)[0]
+        log.info("OK")
 
     def modify_launch_config(self, launch_config, delimiter='_U_'):
         """
@@ -476,6 +491,7 @@ class RawAS(object):
                 delimiter)[0], gen_timestamp()])
         else:
             new_lc_name = delimiter.join([lc_name, gen_timestamp()])
+
         launch_config['LaunchConfigurationName'] = new_lc_name
         self.create_launch_config(launch_config)
         return new_lc_name
@@ -488,14 +504,14 @@ class RawAS(object):
         :param group_config: auto-scaling group configuration
         """
         endpoint = {'endpoint': self.endpoint}
-        params = keyname_formatd(group_config)
-        params.update(endpoint)
         cmd = "UpdateAutoScalingGroup"
+        params = fetch_used_params(self.name, cmd, group_config)
+        params.update(endpoint)
         try:
-            response = operate(self.service, cmd, params)
+            self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
             raise IcsASException(e)
-        return self.handle_response(response)[0]
+        log.info("OK")
 
     def update_group(self, group_config, launch_config):
         """
@@ -508,10 +524,21 @@ class RawAS(object):
         :param launch_config: launch configuration
         """
         group_name = group_config['AutoScalingGroupName']
-        group_data = clean_empty_items(self.fetch_group(group_name))
-        lc_name = group_data['LaunchConfigurationName']
-        launch_data = clean_empty_items(self.fetch_launch_config(lc_name))
+        try:
+            group_data = clean_empty_items(self.fetch_group(group_name))
+        except Exception, e:
+            log.error(e)
+            return False
 
+        lc_name = group_data['LaunchConfigurationName']
+        try:
+            launch_data = clean_empty_items(self.fetch_launch_config(lc_name))
+        except Exception, e:
+            log.error(e)
+            return False
+
+        # FIXME: trick to remove user-data
+        launch_config.pop('UserData')
         launch_config = dict_merge(launch_data, launch_config)
 
         # FIXME: need to refine and remove the unused items
@@ -525,24 +552,32 @@ class RawAS(object):
         if launch_config == launch_data:
             log.info("no need to update the launch configuration")
         else:
-            log.info("update the launch configuration")
-            new_lc_name = self.modify_launch_config(launch_config)
-            group_config['LaunchConfigurationName'] = new_lc_name
-            log.info("New launch configuration name:")
-            log.info(">> %s" % new_lc_name)
+            try:
+                new_lc_name = self.modify_launch_config(launch_config)
+                group_config['LaunchConfigurationName'] = new_lc_name
+            except Exception, e:
+                log.error(e)
+                return False
 
-        log.info("update the auto-scaling group")
+        log.info("attach the new launch configuration to")
+        log.info(">> %s" % group_name)
         try:
-            log.info(self.modify_group(group_config))
+            self.modify_group(group_config)
         except Exception, e:
             log.error(e)
-            log.info("delete the new launch configuration:")
-            log.info(">> %s" % new_lc_name)
-            return self.delete_launch_config(new_lc_name)
+            try:
+                self.delete_launch_config(new_lc_name)
+            except Exception, e:
+                log.error(e)
+            return False
+
+        try:
+            self.delete_launch_config(lc_name)
+        except Exception, e:
+            log.error(e)
+            return False
         else:
-            log.info("delete the old launch configuration:")
-            log.info(">> %s" % lc_name)
-            return self.delete_launch_config(lc_name)
+            return True
 
     def launch_group(self, group_config, launch_config):
         """
@@ -554,22 +589,26 @@ class RawAS(object):
         :type launch_config: dict
         :param launch_config: launch configuration
         """
-        result = {}
+        result = 0
         try:
-            response = self.create_launch_config(launch_config)
+            self.create_launch_config(launch_config)
         except Exception, e:
             log.error(e)
         else:
-            result['CreateLaunchConfiguration'] = response
+            result += 1
         try:
-            response = self.create_group(group_config)
+            self.create_group(group_config)
         except Exception, e:
             log.error(e)
         else:
-            result['CreateAutoScalingGroup'] = response
-        return result
+            result += 1
 
-    def kill_group(self, group_name, force=False):
+        if result == 2:
+            return True
+        else:
+            return False
+
+    def kill_group(self, group_name, force=False, force_cmd="-force"):
         """
         Delete a new Auto-Scaling Group
 
@@ -582,29 +621,36 @@ class RawAS(object):
         try:
             group_data = self.fetch_group(group_name)
         except Exception, e:
-            return e
+            log.error(e)
+            return False
+
         lc_name = group_data['LaunchConfigurationName']
         if group_data['Instances'] and not force:
             error_msg = "auto-scaling group '%s' " % group_name + \
                 "has running instances, " + \
                 "if you have to kill it forcely, " + \
-                "please use '-force'"
-            return error_msg
+                "please use '%s'" % force_cmd
+            log.error(error_msg)
+            return False
 
-        result = {}
+        result = 0
         try:
-            response = self.delete_group(group_name)
+            self.delete_group(group_name)
         except Exception, e:
             log.error(e)
         else:
-            result['DeleteAutoScalingGroup'] = response
+            result += 1
         try:
-            response = self.delete_launch_config(lc_name)
+            self.delete_launch_config(lc_name)
         except Exception, e:
             log.error(e)
         else:
-            result['DeleteLaunchConfiguration'] = response
-        return result
+            result += 1
+
+        if result == 2:
+            return True
+        else:
+            return False
 
     def new_scaling_policy(self, scaling_policy, metric_alarm):
         """
@@ -616,18 +662,22 @@ class RawAS(object):
         :type metric_alarm: dict
         :param metric_alarm: metric alarm configuration
         """
+        result = 0
         endpoint = {'endpoint': self.endpoint}
         cmd = "PutScalingPolicy"
         params = fetch_used_params(self.name, cmd, scaling_policy)
         params.update(endpoint)
-
+        log.info("create the scaling policy")
+        log.info(">> %s" % scaling_policy["PolicyName"])
         try:
-            response = operate(self.service, cmd, params)
+            data = self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
-            log.error("Failed to create this scaling policy...")
-            raise IcsASException(e)
-        policy_arn = self.handle_response(response)[1]['PolicyARN']
+            log.error(e)
+        else:
+            log.info("OK")
+            result += 1
 
+        policy_arn = data['PolicyARN']
         # FIXME: special here, just for cloudwatch service
         name = "cloudwatch"
         service, endpoint = init_botocore_service(name, self.region)
@@ -636,12 +686,20 @@ class RawAS(object):
         metric_alarm['AlarmActions'].append(policy_arn)
         params = fetch_used_params(name, cmd, metric_alarm)
         params.update(endpoint)
+        log.info("create the associated metric alarm")
+        log.info(">> %s" % metric_alarm["AlarmName"])
         try:
-            response = operate(service, cmd, params)
+            self.handle_response(operate(service, cmd, params))
         except Exception, e:
-            log.error("Failed to create this metric alarm...")
-            raise IcsASException(e)
-        return self.handle_response(response)[0]
+            log.error(e)
+        else:
+            log.info("OK")
+            result += 1
+
+        if result == 2:
+            return True
+        else:
+            return False
 
     def delete_scaling_policy(self, scaling_policy, metric_alarm):
         """
@@ -653,16 +711,20 @@ class RawAS(object):
         :type metric_alarm: dict
         :param metric_alarm: metric alarm configuration
         """
+        result = 0
         endpoint = {'endpoint': self.endpoint}
         cmd = "DeletePolicy"
         params = fetch_used_params(self.name, cmd, scaling_policy)
         params.update(endpoint)
-
+        log.info("delete the scaling policy")
+        log.info(">> %s" % scaling_policy["PolicyName"])
         try:
-            response = operate(self.service, cmd, params)
+            self.handle_response(operate(self.service, cmd, params))
         except Exception, e:
-            log.error("Failed to delete this scaling policy...")
             log.error(e)
+        else:
+            log.info("OK")
+            result += 1
 
         # FIXME: special here, just for cloudwatch service
         name = "cloudwatch"
@@ -672,12 +734,19 @@ class RawAS(object):
         metric_alarm['AlarmNames'] = [metric_alarm['AlarmName']]
         params = fetch_used_params(name, cmd, metric_alarm)
         params.update(endpoint)
-
+        log.info("delete the associated metric alarm")
+        log.info(">> %s" % metric_alarm["AlarmName"])
         try:
-            response = operate(service, cmd, params)
+            self.handle_response(operate(service, cmd, params))
         except Exception, e:
-            log.error("Failed to delete this metric alarm...")
-            raise IcsASException(e)
-        return self.handle_response(response)[0]
+            log.error(e)
+        else:
+            log.info("OK")
+            result += 1
+
+        if result == 2:
+            return True
+        else:
+            return False
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
