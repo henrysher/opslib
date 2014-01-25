@@ -1,20 +1,11 @@
-# vi: ts=4 expandtab
-#
-#    Copyright (C) 2012 Yahoo! Inc.
-#
-#    Author: Joshua Harlow <harlowja@yahoo-inc.com>
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License version 3, as
-#    published by the Free Software Foundation.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+SysConf: Library for SysConf
+----------------------------
+
++------------------------+------------+
+| This is the SysConf common library. |
++------------------------+------------+
+"""
 
 from StringIO import StringIO
 
@@ -28,7 +19,7 @@ import re
 # to ensure that all values are quoted/unquoted correctly
 # since these configs are usually sourced into
 # bash scripts...
-import configobj
+from opslib.icsutils.configobj import configobj
 
 # See: http://pubs.opengroup.org/onlinepubs/000095399/basedefs/xbd_chap08.html
 # or look at the 'param_expand()' function in the subst.c file in the bash
@@ -54,6 +45,7 @@ def _contains_shell_variable(text):
 
 
 class SysConf(configobj.ConfigObj):
+
     def __init__(self, contents):
         configobj.ConfigObj.__init__(self, contents,
                                      interpolation=False,
@@ -77,7 +69,7 @@ class SysConf(configobj.ConfigObj):
         if value[0] in ['"', "'"] and value[-1] in ['"', "'"]:
             if len(value) == 1:
                 quot_func = (lambda x:
-                                self._get_single_quote(x) % x)
+                             self._get_single_quote(x) % x)
         else:
             # Quote whitespace if it isn't the start + end of a shell command
             if value.strip().startswith("$(") and value.strip().endswith(")"):
@@ -90,10 +82,10 @@ class SysConf(configobj.ConfigObj):
                         # to use single quotes which won't get expanded...
                         if re.search(r"[\n\"']", value):
                             quot_func = (lambda x:
-                                            self._get_triple_quote(x) % x)
+                                         self._get_triple_quote(x) % x)
                         else:
                             quot_func = (lambda x:
-                                            self._get_single_quote(x) % x)
+                                         self._get_single_quote(x) % x)
                     else:
                         quot_func = pipes.quote
         if not quot_func:
@@ -106,8 +98,6 @@ class SysConf(configobj.ConfigObj):
         val = self._decode_element(self._quote(this_entry))
         key = self._decode_element(self._quote(entry))
         cmnt = self._decode_element(comment)
-        return '%s%s%s%s%s' % (indent_string,
-                               key,
+        return '%s%s%s%s%s' % (indent_string, key,
                                self._a_to_u('='),
-                               val,
-                               cmnt)
+                               val, cmnt)
