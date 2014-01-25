@@ -6,6 +6,7 @@ Utils: Library for Utils
 | This is the Utils common library. |
 +------------------------+----------+
 """
+
 from StringIO import StringIO
 
 import errno
@@ -241,21 +242,7 @@ def read_sysconfig_file(fn):
     return (exists, SysConf(contents))
 
 
-tz_zone_dir = "/usr/share/zoneinfo"
-clock_conf_fn = "/etc/sysconfig/clock"
-tz_local_fn = "/etc/localtime"
-
-
-def dist_uses_systemd():
-    # Fedora 18 and RHEL 7 were the first adopters in their series
-    (dist, vers) = system_info()['dist'][:2]
-    major = (int)(vers.split('.')[0])
-    return ((dist.startswith('Red Hat Enterprise Linux') and major >= 7)
-            or (dist.startswith('Fedora') and major >= 18)
-            or (dist.startswith('CentOS') and major >= 6))
-
-
-def find_tz_file(tz):
+def find_tz_file(tz, tz_zone_dir="/usr/share/zoneinfo"):
     tz_file = os.path.join(tz_zone_dir, str(tz))
     if not os.path.isfile(tz_file):
         raise IOError(("Invalid timezone %s,"
@@ -263,20 +250,32 @@ def find_tz_file(tz):
     return tz_file
 
 
-def set_timezone(tz):
-    tz_file = find_tz_file(tz)
-    if dist_uses_systemd():
-        # Currently, timedatectl complains if invoked during startup
-        # so for compatibility, create the link manually.
-        del_file(tz_local_fn)
-        sym_link(tz_file, tz_local_fn)
-    else:
+def set_timezone(tz, tz_zone_dir="/usr/share/zoneinfo",
+                 clock_conf_fn="/etc/sysconfig/clock",
+                 tz_local_fn="/etc/localtime"):
+    """
+    Set the system timezone
+
+    :type tz: string
+    :param tz: the name of timezone, like "Asia/Shanghai"
+
+    :rtype: boolean
+    :return: True/False
+    """
+    try:
+        tz_file = find_tz_file(tz, tz_zone_dir)
         # Adjust the sysconfig clock zone setting
         clock_cfg = {
             'ZONE': str(tz),
         }
         update_sysconfig_file(clock_conf_fn, clock_cfg)
         # This ensures that the correct tz will be used for the system
-        copy(tz_file, tz_local_fn)
+        del_file(tz_local_fn)
+        sym_link(tz_file, tz_local_fn)
+    except Exception as e:
+        log.exception("Fail to set the timezone: %s due to %s" % (tz, e))
+        return False
+    else:
+        return True
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
