@@ -11,7 +11,7 @@ import opslib
 setup(name='opslib',
       version=opslib.__version__,
       description='Library for AWS Operations',
-      packages=["opslib", "opslib.icsutils"],
+      packages=["opslib", "opslib.icsutils", "opslib.icsutils.configobj"],
       package_data={"opslib": ["opslib.ini"]},
       author="Henry Huang",
       author_email="henry.s.huang@gmail.com",
