@@ -180,7 +180,7 @@ class IcsR53(object):
         return self.zone.find_records(name, type, desired,
                                       all, identifier)
 
-    def wait_to_complete(self, status=None, timeout=60):
+    def wait_to_complete(self, status=None, timeout=120):
         """
         Wait for the Route53 commit change to complete
 
