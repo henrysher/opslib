@@ -18,6 +18,7 @@ from opslib.icss3 import IcsS3
 from opslib.icsec2 import IcsEc2
 from opslib.icsutils.misc import get_userdata
 from opslib.icsutils.misc import is_valid_ip
+from opslib.icsutils.utils import set_timezone
 from opslib.icsutils.icsalert import IcsAlert
 from opslib.icsexception import IcsMetaException
 
@@ -27,17 +28,36 @@ log = logging.getLogger(__name__)
 
 class IcsMeta(object):
 
-    def __init__(self):
+    def __init__(self, credentials=None, metadata=None,
+                 userdata=None, tags=None):
         """
         Initialize Ics Meta (meta-data, user-data, credentials, tags)
+
+        :type credentials: dict
+        :param credentials: user-defined credentials for testing
+
+        :type metadata: dict
+        :param metadata: user-defined metadata for testing
+
+        :type userdata: dict
+        :param userdata: user-defined userdata for testing
+
+        :type tags: dict
+        :param tags: user-defined instance tags for testing
         """
-        self.meta_data = IcsMeta.get_meta_data()
-        self.user_data = json.loads(IcsMeta.get_user_data())
-        self.credentials = self.get_credentials()
-        self.tags = self.get_machine_tags()
+        self.meta_data = IcsMeta.get_meta_data(data=metadata)
+
+        if userdata is not None:
+            self.user_data = userdata
+        else:
+            self.user_data = json.loads(IcsMeta.get_user_data())
+
+        self.credentials = self.get_credentials(credentials=credentials)
+        self.tags = self.get_machine_tags(tags=tags)
 
     @staticmethod
-    def get_meta_data(timeout=None, url=None, num_retries=None):
+    def get_meta_data(timeout=None, url=None, num_retries=None,
+                      data=None):
         """
         Get instance meta data
 
@@ -50,20 +70,29 @@ class IcsMeta(object):
         :type num_retries: int
         :param num_retries: how many times to retry
 
+        :type data: dict
+        :param data: user-defined metadata for testing
+
         :rtype: dict
         :return: instance meta data as a dictionary
         """
+        if data is not None:
+            return data
+
         if timeout is None:
             timeout = config.getint('Boto', 'http_socket_timeout', 70)
+
         if num_retries is None:
             num_retries = config.getint('Boto', 'num_retries', 5)
+
         if url is None:
             url = config.get(
                 'Boto', 'metadata_service_url', 'http://169.254.169.254')
+
         return get_metadata(timeout=timeout, url=url, num_retries=num_retries)
 
     @staticmethod
-    def get_user_data(timeout=None, url=None, num_retries=None):
+    def get_user_data(timeout=None, url=None, num_retries=None, data=None):
         """
         Get instance user data
 
@@ -76,25 +105,40 @@ class IcsMeta(object):
         :type num_retries: int
         :param num_retries: how many times to retry
 
+        :type data: string
+        :param data: user-defined userdata for testing
+
         :rtype: dict
         :return: instance user data as a dictionary
         """
+        if data is not None:
+            return data
+
         if timeout is None:
             timeout = config.getint('Boto', 'http_socket_timeout', 70)
+
         if num_retries is None:
             num_retries = config.getint('Boto', 'num_retries', 5)
+
         if url is None:
             url = config.get(
                 'Boto', 'metadata_service_url', 'http://169.254.169.254')
+
         return get_userdata(timeout=timeout, url=url, num_retries=num_retries)
 
-    def get_credentials(self):
+    def get_credentials(self, credentials=None):
         """
         Get AWS credentials from instance user-data
+
+        :type credentials: dict
+        :param credentials: user-defined credentials for testing
 
         :rtype: dict
         :return: AWS credentials as a dictionary
         """
+        if credentials is not None:
+            return credentials
+
         try:
             access_key = self.user_data[
                 'Credentials']['AWS_ACCESS_KEY_ID']
@@ -105,6 +149,55 @@ class IcsMeta(object):
             return credentials
         except KeyError:
             return None
+
+    def get_machine_tags(self, tags=None, timeout=120):
+        """
+        Get the instance tags
+
+        :type tags: dict
+        :param tags: user-defined credentials for testing
+
+        :type timeout: int
+        :param timeout: timeout for the request
+
+        :rtype: string
+        :return: the tags of this instance
+        """
+        if tags is not None:
+            return tags
+
+        region = self.get_region()
+        instance_id = self.get_instance_id()
+
+        if self.credentials is None:
+            ec2conn = IcsEc2(region)
+        else:
+            ec2conn = IcsEc2(region, **self.credentials)
+
+        for i in xrange(timeout / 5):
+            result = ec2conn.get_instance_tags(instance_id)
+            if result:
+                return result
+            time.sleep(5)
+        else:
+            # To avoid specific tags with "TypeError" Exception
+            return {}
+
+    def init_config(self):
+        """
+        Combine meta-data, user-data, tags into one json string
+
+        :rtype: dict
+        :return: json string contains meta-data, user-data, tags
+        """
+        data = {}
+        data.update({'MetaData': self.meta_data})
+        data.update({'UserData': self.user_data})
+        data.update({'Tags': self.tags})
+        data.update({'Credentials': self.credentials})
+        return data
+
+    # Fetch useful information from meta-data
 
     def get_region(self):
         """
@@ -146,8 +239,6 @@ class IcsMeta(object):
             return self.meta_data["public-ipv4"]
         except KeyError:
             return None
-        #    raise IcsMetaException(
-        #        "Cannot find the 'public ip address' in meta-data.")
 
     def get_private_ip(self):
         """
@@ -175,6 +266,34 @@ class IcsMeta(object):
         except KeyError:
             raise IcsMetaException(
                 'Cannot find the public hostname in meta-data.')
+
+    def get_instance_id(self):
+        """
+        Get the instance id from instance meta-data
+
+        :rtype: string
+        :return: the instance id
+        """
+        try:
+            return self.meta_data["instance-id"]
+        except KeyError:
+            raise IcsMetaException(
+                "Cannot find the 'instance id' in meta-data.")
+
+    def get_openssh_pubkey(self):
+        """
+        Get the openssh public key from instance meta-data
+
+        :rtype: string
+        :return: the contents of openssh public key
+        """
+        try:
+            return self.meta_data['public-keys'].values()[0][0]
+        except KeyError:
+            raise IcsMetaException(
+                "Cannot find the 'openssh-key' in meta-data.")
+
+    # Fetch useful information from user-data
 
     def get_sns_topic(self):
         """
@@ -217,55 +336,19 @@ class IcsMeta(object):
             raise IcsMetaException(
                 "Cannot find the 'URL' in user-data.")
 
-    def get_instance_id(self):
+    def get_timezone(self):
         """
-        Get the instance id from instance meta-data
+        Get the timezone from instance user-data
 
         :rtype: string
-        :return: the instance id
+        :return: the name of timezone, like "Asia/Shanghai"
         """
         try:
-            return self.meta_data["instance-id"]
+            return self.user_data['Bootstrap']['Timezone']
         except KeyError:
-            raise IcsMetaException(
-                "Cannot find the 'instance id' in meta-data.")
+            return None
 
-    def get_openssh_pubkey(self):
-        """
-        Get the openssh public key from instance meta-data
-
-        :rtype: string
-        :return: the contents of openssh public key
-        """
-        try:
-            return self.meta_data['public-keys'].values()[0][0]
-        except KeyError:
-            raise IcsMetaException(
-                "Cannot find the 'openssh-key' in meta-data.")
-
-    def get_machine_tags(self, timeout=120):
-        """
-        Get the instance tags
-
-        :rtype: string
-        :return: the tags of this instance
-        """
-        region = self.get_region()
-        instance_id = self.get_instance_id()
-
-        if self.credentials is None:
-            ec2conn = IcsEc2(region)
-        else:
-            ec2conn = IcsEc2(region, **self.credentials)
-
-        for i in xrange(timeout / 5):
-            result = ec2conn.get_instance_tags(instance_id)
-            if result:
-                return result
-            time.sleep(5)
-        else:
-            # To avoid specific tags with "TypeError" Exception
-            return {}
+    # Fetch useful information from instance tags
 
     def get_eips_from_tag(self):
         """
@@ -342,6 +425,25 @@ class IcsMeta(object):
         except Exception:
             return None
 
+    # Functions on how to deal with the information above
+
+    def configure_timezone(self, tz=None):
+        """
+        Configure the system timezone
+
+        :type tz: string
+        :param tz: the name of timezone, like "Asia/Shanghai"
+        """
+        if tz is None:
+            timezone = self.get_timezone()
+
+        if timezone is None:
+            log.info("No timezone specified"
+                     "in the user data,"
+                     " skipped...")
+        else:
+            set_timezone(timezone)
+
     def generate_hostname(self):
         """
         Generate the hostname
@@ -410,19 +512,6 @@ class IcsMeta(object):
         instcfg_uri = os.path.join(rolecfg_uri, self.get_instance_name())
         localpath.extend(s3conn.batch_download(instcfg_uri, pattern=pattern))
         return localpath
-
-    def init_config(self):
-        """
-        Combine meta-data, user-data, tags into one json string
-
-        :rtype: dict
-        :return: json string contains meta-data, user-data, tags
-        """
-        data = {}
-        data.update({'MetaData': self.meta_data})
-        data.update({'UserData': self.user_data})
-        data.update({'Tags': self.get_machine_tags()})
-        return data
 
     def init_alert(self, prefix='ICS'):
         """
