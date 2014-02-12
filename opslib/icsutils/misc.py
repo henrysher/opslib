@@ -686,4 +686,24 @@ def user_data_decode(user_data):
     return base64.b64decode(user_data)
 
 
+def region_abbr(region, delimiter="-"):
+    if not isinstance(region, basestring):
+        raise IcsException("Invalid input: string required")
+    if delimiter not in region:
+        raise IcsException("Invalid region with no '%s' as the delimiter" %
+                           delimiter)
+
+    params = region.split(delimiter)
+    if not params[-1].isdigit():
+        raise IcsException("Invalid region with no digit in the end")
+    if int(params[-1]) == 1:
+        last = ""
+    elif int(params[-1]) > 1:
+        last = params[-1]
+    else:
+        raise IcsException("Invalid region with the digit '0' in the end")
+
+    params.pop(-1)
+    return ''.join([''.join(param[0] for param in params), last])
+
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
