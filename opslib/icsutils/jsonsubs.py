@@ -260,9 +260,8 @@ class JsonSubs(object):
                 return reduce(lambda x, y: x[y], args, tmp0)
 
             except Exception:
-                msg = traceback.format_exc()
-                raise IcsException(
-                    "Error found in <Mapping>: %s \n %s" % (map_name, msg))
+                log.error("Error found in <Mapping>:"
+                          " [%s, %s]" % (map_name, args))
 
         raise IcsException(
             "Invalid parameters found: (%s,%s)" % (map_name, args))
