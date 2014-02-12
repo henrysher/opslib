@@ -355,17 +355,26 @@ class IcsEc2(EC2Connection):
         eipop.disassociate()
         return self.is_eip_free(eip)[0]
 
-    def get_volumes_by_instance(self, instance_id):
+    def get_volumes_by_instance(self, instance_id, device_name=None):
         """
-        Get boto Volume Objects by instance Id
+        Get boto Volume Objects by instance Id or device name
 
         :type instance_id: string
         :param instance_id: EC2 instance id startwith 'i-xxxxxxx'
 
+        :type device_name: string
+        :param device_name: device name like '/dev/sdf'
+
         :rtype: list
         :return: list of boto volume objects
         """
-        return self.get_all_volumes(filters={'instance-id': instance_id})
+        if device_name is None:
+            filters = {'attachment.instance-id': instance_id}
+        else:
+            filters = {'attachment.instance-id': instance_id,
+                       'attachment.device': device_name}
+
+        return self.get_all_volumes(filters=filters)
 
     def take_snapshot(self, volume_id, description=None, tags=None):
         """
@@ -430,6 +439,15 @@ class IcsEc2(EC2Connection):
             refined_tags['tag:Role'] = tags['tag:Role']
             refined_tags['tag:Timestamp'] = tags['tag:Timestamp']
             tags = refined_tags
+
+        if 'tag:Timestamp' in tags and \
+                tags['tag:Timestamp'].lower() == 'latest':
+            tags.pop('tag:Timestamp')
+            snapshots = self.get_all_snapshots(filters=self.format_tags(tags))
+            if snapshots:
+                return self.fetch_latest_snapshot(snapshots)
+            else:
+                return None
 
         return self.get_all_snapshots(filters=self.format_tags(tags))
 
@@ -553,23 +571,32 @@ class IcsEc2(EC2Connection):
         else:
             return images[0].id
 
-    def get_all_zones(self):
+    def get_all_zones(self, zones=None):
         """
         Get all Availability Zones under this region
+
+        :type zones: list
+        :param zones: specified zone list
 
         :rtype: list
         :return: list of availability zones in this region
         """
-        return [zone.name for zone in super(IcsEc2, self).get_all_zones()]
+        if zones is not None and isinstance(zones, list):
+            return zones
+        else:
+            return [zone.name for zone in super(IcsEc2, self).get_all_zones()]
 
-    def size_of_all_zones(self):
+    def size_of_all_zones(self, zones=None):
         """
         Get the number of all Availability Zones under this region
+
+        :type zones: list
+        :param zones: specified zone list
 
         :rtype: int
         :return: number of availability zones in this region
         """
-        zone_list = self.get_all_zones()
+        zone_list = self.get_all_zones(zones)
         if zone_list:
             return len(zone_list)
         else:
@@ -627,9 +654,12 @@ class IcsEc2(EC2Connection):
         else:
             return None
 
-    def get_az_from_subnet_id(self, subnet_id=None):
+    def get_az_from_subnet_id(self, subnet_id=None, zones=None):
         """
         Get the name of Availability Zone by its Subnet Id
+
+        :type zones: list
+        :param zones: specified zone list
 
         :type subnet_id: string
         :param subnet_id: subnet id
@@ -638,7 +668,7 @@ class IcsEc2(EC2Connection):
         :return: availability zone name
         """
         if subnet_id is None:
-            return self.get_all_zones()
+            return self.get_all_zones(zones)
         vpc = vpc_connect_to_region(self.region.name)
         subnets = vpc.get_all_subnets(subnet_id)
         if subnets and isinstance(subnets, list):
@@ -646,9 +676,12 @@ class IcsEc2(EC2Connection):
         else:
             return None
 
-    def get_zone_name_for_cassandra(self, index):
+    def get_zone_name_for_cassandra(self, index, zones=None):
         """
         Get the name of Availability Zone for Cassandra
+
+        :type zones: list
+        :param zones: specified zone list
 
         :type index: int
         :param index: the index of cassandra instance
@@ -656,13 +689,16 @@ class IcsEc2(EC2Connection):
         :rtype: string
         :return: zone name like "us-west-2a"
         """
-        zone_list = self.get_all_zones()
-        zone_size = self.size_of_all_zones()
+        zone_list = self.get_all_zones(zones)
+        zone_size = self.size_of_all_zones(zones)
         return zone_list[(int(index) - 1) % zone_size]
 
-    def get_zone_index_for_cassandra(self, index):
+    def get_zone_index_for_cassandra(self, index, zones=None):
         """
         Get the index of Availability Zone for Cassandra
+
+        :type zones: list
+        :param zones: specified zone list
 
         :type index: int
         :param index: the index of cassandra instance
@@ -670,12 +706,15 @@ class IcsEc2(EC2Connection):
         :rtype: string
         :return: zone index like "1"
         """
-        zone_size = self.size_of_all_zones()
+        zone_size = self.size_of_all_zones(zones)
         return str((int(index) - 1) / zone_size + 1)
 
-    def get_zone_suffix_for_cassandra(self, index):
+    def get_zone_suffix_for_cassandra(self, index, zones=None):
         """
         Get the suffix of Availability Zone for Cassandra
+
+        :type zones: list
+        :param zones: specified zone list
 
         :type index: int
         :param index: the index of cassandra instance
@@ -683,8 +722,8 @@ class IcsEc2(EC2Connection):
         :rtype: string
         :return: zone suffix like "a-1"
         """
-        return "-".join([self.get_zone_name_for_cassandra(index)[-1],
-                        self.get_zone_index_for_cassandra(index)])
+        return "-".join([self.get_zone_name_for_cassandra(index, zones)[-1],
+                        self.get_zone_index_for_cassandra(index, zones)])
 
 
 

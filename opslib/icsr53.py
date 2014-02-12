@@ -52,7 +52,7 @@ class IcsR53(object):
             raise IcsR53Exception(
                 "DnsName should be a 'str' not %s" % type(name))
 
-        name = name.split(':', 3)
+        name = name.split(':', 3).lstrip(" ").rstrip(" ")
         if len(name) < 3 or len(name) > 4:
             raise IcsR53Exception(
                 "Invalid number of sub-strings: '%s'" % len(name))
