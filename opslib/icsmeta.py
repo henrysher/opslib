@@ -18,9 +18,10 @@ from opslib.icss3 import IcsS3
 from opslib.icsec2 import IcsEc2
 from opslib.icsutils.misc import get_userdata
 from opslib.icsutils.misc import is_valid_ip
-from opslib.icsutils.utils import set_timezone
+from opslib.icsutils.utils import set_timezone, chmod, chownbyname
+from opslib.icsutils.utils import del_file, copy
 from opslib.icsutils.icsalert import IcsAlert
-from opslib.icsexception import IcsMetaException
+from opslib.icsexception import IcsMetaException, IcsS3Exception
 
 import logging
 log = logging.getLogger(__name__)
@@ -310,17 +311,24 @@ class IcsMeta(object):
 
     def get_cfg_bucket(self):
         """
-        Get the Config Bucket from instance user-data
+        Get the CfgURI from instance user-data
 
         :rtype: string
-        :return: the Config Bucket name
+        :return: the CfgURI
         """
+        # Compatible to old <S3::ConfigBucket>
         try:
             cfg_bucket = self.user_data['S3']['ConfigBucket']
+            log.info("'S3::ConfigBucket' is deprecated now.")
             return cfg_bucket
         except KeyError:
-            raise IcsMetaException(
-                "Cannot find the 'Config Bucket' in user-data.")
+            pass
+
+        try:
+            cfg_uri = self.user_data['S3']['CfgURI']
+            return cfg_uri
+        except KeyError:
+            raise IcsMetaException("Cannot find the 'CfgURI' in user-data.")
 
     def get_script_url(self):
         """
@@ -492,6 +500,118 @@ class IcsMeta(object):
         localpath = s3conn.batch_download(script_uri, pattern=pattern)
         return localpath
 
+    def validate_inventory_file(self, s3url, filename="inventory_file"):
+        """
+        Validate the inventory file on provided S3 URL
+
+        :type s3url: string
+        :param s3url: S3 URL for searching inventory file: "s3://XXXX"
+
+        :type filename: string
+        :param filename: the name of inventory file
+
+        :rtype: dict
+        :return: dict or None
+        """
+        if self.credentials is None:
+            s3conn = IcsS3()
+        else:
+            s3conn = IcsS3(**self.credentials)
+
+        if not s3url.startswith("s3://"):
+            raise IcsMetaException(
+                "Malformed S3 URL has been found: no prefix 's3://'")
+        else:
+            s3url = os.path.join(s3url, filename)
+
+        try:
+            inventory_content = s3conn.get_file_as_string(s3url)
+        except IcsS3Exception as e:
+            log.info("No such inventory file '%s' found" % s3url)
+            return None
+        except Exception as e:
+            log.error("Failed to download the inventory file '%s'" % s3url)
+            log.error(e)
+            return None
+
+        try:
+            data = json.loads(inventory_content)
+        except Exception as e:
+            log.error("Malformed inventory file '%s'" % s3url)
+            log.error(e)
+            return None
+
+        for fname, attribute in data.iteritems():
+            if "owner" not in attribute \
+                or "group" not in attribute \
+                or "mode" not in attribute \
+                    or "dest" not in attribute:
+                log.error("Item missing in the inventory file '%s': "
+                          "'%s >> %s'" %
+                          (s3url, fname, attribute))
+                return None
+        else:
+            log.info("Inventory file '%s': verified -> OK" % s3url)
+            log.debug("Inventory file content: \n %s" % data)
+            return data
+
+    def download_cfg_from_inventory_file(self, s3url):
+        """
+        Download configuration files from S3 according to the inventory file
+
+        :type s3url: string
+        :param s3url: S3 URL for searching inventory file, like "s3://XXXXX"
+        """
+        log.debug(">> Enter the 'inventory-file' download mode")
+        if self.credentials is None:
+            s3conn = IcsS3()
+        else:
+            s3conn = IcsS3(**self.credentials)
+
+        inventory_data = self.validate_inventory_file(s3url)
+        if inventory_data is None:
+            log.debug(">> Exit the 'inventory-file' download mode")
+            return None
+
+        for fname, attr in inventory_data.iteritems():
+            s3loc = os.path.join(s3url, fname)
+            try:
+                filepath = s3conn.download_files(s3loc)
+            except Exception as e:
+                log.error(e)
+                break
+
+            # Backup
+            bak_file = ".".join([attr['dest'], "bak"])
+            try:
+                copy(attr['dest'], bak_file)
+            except (IOError, OSError) as e:
+                log.info("No need to back up for '%s' - %s" %
+                         (attr['dest'], e))
+                pass
+
+            try:
+                copy(filepath, attr['dest'])
+                chmod(attr['dest'], attr['mode'])
+                chownbyname(attr['dest'], user=attr['owner'],
+                            group=attr['group'])
+
+            except Exception as e:
+                log.error("Failed to copy '%s' to '%s'" %
+                          (filepath, attr['dest']))
+                log.error(e)
+
+                # Rollback
+                copy(bak_file, attr['dest'])
+                del_file(filepath)
+                break
+
+            del_file(filepath)
+            log.info("'%s' copied to '%s' with '%s:%s:%s'" %
+                     (s3loc, attr['dest'], attr['mode'],
+                      attr['owner'], attr['group']))
+        log.debug(">> Exit the 'inventory-file' download mode")
+
     def download_cfg(self, pattern):
         """
         Download configuration files from S3
@@ -506,11 +626,20 @@ class IcsMeta(object):
             s3conn = IcsS3()
         else:
             s3conn = IcsS3(**self.credentials)
+
+        localpath = None
+
         rolecfg_uri = "s3://" + os.path.join(self.get_cfg_bucket(),
                                              self.get_role_name())
-        localpath = s3conn.batch_download(rolecfg_uri, pattern=pattern)
+        result = self.download_cfg_from_inventory_file(rolecfg_uri)
+        if result is None:
+            localpath = s3conn.batch_download(rolecfg_uri, pattern=pattern)
+
         instcfg_uri = os.path.join(rolecfg_uri, self.get_instance_name())
-        localpath.extend(s3conn.batch_download(instcfg_uri, pattern=pattern))
+        result = self.download_cfg_from_inventory_file(instcfg_uri)
+        if result is None:
+            localpath.extend(
+                s3conn.batch_download(instcfg_uri, pattern=pattern))
         return localpath
 
     def init_alert(self, prefix='ICS'):

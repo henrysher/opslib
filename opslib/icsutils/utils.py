@@ -15,6 +15,7 @@ import os
 import os.path
 import platform
 import pwd
+import grp
 import random
 import shutil
 import sys
@@ -122,14 +123,14 @@ def del_file(path):
 
 def copy(src, dest):
     log.debug("Copying %s to %s", src, dest)
-    shutil.copy(src, dest)
+    shutil.copy2(src, dest)
 
 
 def chmod(path, mode):
     real_mode = safe_int(mode)
     if path and real_mode:
-        with SeLinuxGuard(path):
-            os.chmod(path, real_mode)
+        # FIXME: no consideration on SELinux
+        os.chmod(path, real_mode)
 
 
 def ensure_dir(path, mode=None):
@@ -143,18 +144,32 @@ def ensure_dir(path, mode=None):
         chmod(path, mode)
 
 
+def chownbyid(fname, uid=None, gid=None):
+    if uid in [None, -1] and gid in [None, -1]:
+        # Nothing to do
+        return
+    log.debug("Changing the ownership of %s to %s:%s", fname, uid, gid)
+    os.chown(fname, uid, gid)
+
+
+def chownbyname(fname, user=None, group=None):
+    uid = -1
+    gid = -1
+    try:
+        if user:
+            uid = pwd.getpwnam(user).pw_uid
+        if group:
+            gid = grp.getgrnam(group).gr_gid
+    except KeyError as e:
+        raise OSError("Unknown user or group: %s" % (e))
+    chownbyid(fname, uid, gid)
+
+
 def safe_int(possible_int):
     try:
         return int(possible_int)
     except (ValueError, TypeError):
         return None
-
-
-def chmod(path, mode):
-    real_mode = safe_int(mode)
-    if path and real_mode:
-        # FIXME: no consideration on SELinux
-        os.chmod(path, real_mode)
 
 
 def pipe_in_out(in_fh, out_fh, chunk_size=1024, chunk_cb=None):
