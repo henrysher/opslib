@@ -661,20 +661,28 @@ class IcsEc2(EC2Connection):
         :type zones: list
         :param zones: specified zone list
 
-        :type subnet_id: string
+        :type subnet_id: string or comma-seperated list of string
         :param subnet_id: subnet id
 
-        :rtype: string
-        :return: availability zone name
+        :rtype: list
+        :return: a list of availability zone names
         """
         if subnet_id is None:
             return self.get_all_zones(zones)
+
         vpc = vpc_connect_to_region(self.region.name)
-        subnets = vpc.get_all_subnets(subnet_id)
-        if subnets and isinstance(subnets, list):
-            return [subnets[0].availability_zone]
+        if isinstance(subnet_id, basestring):
+            subnet_ids = subnet_id.lstrip().rstrip().split(",")
         else:
             return None
+
+        zones = []
+        for sid in subnet_ids:
+            subnets = vpc.get_all_subnets(sid)
+            if subnets and isinstance(subnets, list):
+                zones.append(subnets[0].availability_zone)
+
+        return zones
 
     def get_zone_name_for_cassandra(self, index, zones=None):
         """
