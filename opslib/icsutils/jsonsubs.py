@@ -262,6 +262,7 @@ class JsonSubs(object):
             except Exception:
                 log.error("Error found in <Mapping>:"
                           " [%s, %s]" % (map_name, args))
+                return None
 
         raise IcsException(
             "Invalid parameters found: (%s,%s)" % (map_name, args))
@@ -345,8 +346,8 @@ class JsonSubs(object):
         regex = "\%s((<.*?>)|(\(.*?\))|({.*?})|(\[.*?\]))" % esc
         return re.compile(regex)
 
-    def search(self, value, esc='$'):
-        m = self.pattern(esc).search(value)
+    def search(self, value):
+        m = self.pattern().search(value)
         if m is None:
             return None
         else:
@@ -394,7 +395,7 @@ class JsonSubs(object):
         if func in self.builtin:
             params = self.tplsub(value, instance_vars, default_vars)
             log.debug("Call the func '%s' with params '%s'" %
-                     (func, params))
+                      (func, params))
             try:
                 if isinstance(params, dict):
                     return self.builtin[func](**params)

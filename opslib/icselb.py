@@ -75,7 +75,7 @@ class IcsELB(object):
         if elb[0].state == 'InService':
             return False
         else:
-            return elb[0].reason_code
+            return elb[0].description
 
     def parse_listeners(self, listeners):
         """
@@ -119,7 +119,7 @@ class IcsELB(object):
         self.conn.configure_health_check(name, hc)
 
     def create_elb(self, name, zones, listeners=None,
-                   subnets=None, groups=None):
+                   subnets=None, groups=None, scheme='internet-facing'):
         """Create an ELB named <name>
 
         :param name: The mnemonic name associated with the new load balancer
@@ -140,11 +140,14 @@ class IcsELB(object):
 
         :param subnets:  A list of subnet IDs in your VPC
                          to attach to your LoadBalancer
-        :type subnets: list of strings
+        :type subnets: list of string
 
         :param groups: The security groups assigned to
                                your LoadBalancer within your VPC
-        :type groups: list of strings
+        :type groups: list of string
+
+        :param scheme: The type of a LoadBalancer. Default: internet-facing
+        :type scheme: string
         """
 
         l_list = self.parse_listeners(listeners)
@@ -153,7 +156,8 @@ class IcsELB(object):
             area = None
             self.conn.create_load_balancer(name, area, l_list,
                                            subnets=subnets,
-                                           security_groups=groups)
+                                           security_groups=groups,
+                                           scheme=scheme)
         else:
             self.conn.create_load_balancer(name, zones, l_list)
 

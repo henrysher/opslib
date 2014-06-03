@@ -276,8 +276,26 @@ class IcsSGroup(object):
                         filter names/values is dependent on the request being
                         performed.
         :type filters: dict
+
+        :return: A list of boto.ec2.securitygroup.SecurityGroup
+        :type: list
         """
 
         return self.conn.get_all_security_groups(
             groupnames=groupnames,
             group_ids=group_ids, filters=filters)
+
+    def get_rds_security_groups(self, groupname=None):
+        """
+        Get all security groups associated with your account in a region.
+
+        :param groupname: A list of the names of security groups to retrieve.
+                          If not provided, all security groups will be returned.
+        :type groupnames: list
+
+        :return: A list of boto.rds.dbsecuritygroup.DBSecurityGroup
+        :type: list
+        """
+        return self.rds.get_all_dbsecurity_groups(groupname=groupname,
+                                                  max_records=None,
+                                                  marker=None)
