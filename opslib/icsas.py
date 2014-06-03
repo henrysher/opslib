@@ -503,6 +503,8 @@ class RawAS(object):
         :type group_config: dict
         :param group_config: auto-scaling group configuration
         """
+        group_name = group_config['AutoScalingGroupName']
+
         endpoint = {'endpoint': self.endpoint}
         cmd = "UpdateAutoScalingGroup"
         params = fetch_used_params(self.name, cmd, group_config)
@@ -512,6 +514,23 @@ class RawAS(object):
         except Exception, e:
             raise IcsASException(e)
         log.info("OK")
+
+        if "Tags" in group_config:
+            log.info("update the tags of this auto-scaling group")
+            log.info(">> %s" % group_name)
+            cmd = "CreateOrUpdateTags"
+            params = {"Tags": group_config["Tags"]}
+
+            for tag in params["Tags"]:
+                tag["ResourceType"] = "auto-scaling-group"
+
+            params = fetch_used_params(self.name, cmd, params)
+            params.update(endpoint)
+            try:
+                self.handle_response(operate(self.service, cmd, params))
+            except Exception, e:
+                raise IcsASException(e)
+            log.info("OK")
 
     def update_group(self, group_config, launch_config):
         """
@@ -538,12 +557,11 @@ class RawAS(object):
             return False
 
         # FIXME: trick to remove user-data
-        launch_config.pop('UserData')
+        user_data = launch_config.pop('UserData')
         launch_config = dict_merge(launch_data, launch_config)
 
         # FIXME: need to refine and remove the unused items
-        user_data = launch_config['UserData']
-        launch_config['UserData'] = user_data_decode(user_data)
+        launch_config['UserData'] = user_data
         if 'CreatedTime' in launch_config:
             launch_config.pop('CreatedTime')
         if 'LaunchConfigurationARN' in launch_config:
